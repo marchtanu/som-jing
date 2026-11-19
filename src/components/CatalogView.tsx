@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
+  Heart,
   Search,
   ShieldCheck,
   SlidersHorizontal,
@@ -10,19 +11,22 @@ import { Product, ProductCategory } from '../types';
 import { CATEGORY_LABELS, formatTHB, getCountdownParts } from '../utils/format';
 import { SafeImage } from './ui';
 
-const SWATCH_PALETTES: Record<ProductCategory, string[]> = {
-  'art-toys': ['#111111', '#707072', '#beaffd'],
-  sneakers: ['#111111', '#d30005', '#f5f5f5'],
-  gadgets: ['#111111', '#9e9ea0', '#0a7281'],
-  watches: ['#111111', '#007d48', '#4c012d'],
-};
-
 export const CatalogView: React.FC = () => {
-  const { products, setSelectedProductId, setActiveTab } = useStore();
+  const {
+    products,
+    watchlistIds,
+    toggleWatchlist,
+    getSelectedOptionForProduct,
+    setProductSelectedOption,
+    setSelectedProductId,
+    setActiveTab,
+  } = useStore();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory | 'all'>('all');
   const [saleFilter, setSaleFilter] = useState<'all' | 'auction' | 'fixed'>('all');
   const [onlyVerified, setOnlyVerified] = useState(false);
+  const [onlySaved, setOnlySaved] = useState(false);
   const [sortBy, setSortBy] = useState<'ending-soon' | 'price-asc' | 'price-desc'>('ending-soon');
   const [showFilters, setShowFilters] = useState(true);
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -39,8 +43,10 @@ export const CatalogView: React.FC = () => {
         if (selectedCategory !== 'all' && p.category !== selectedCategory) return false;
         if (saleFilter !== 'all' && p.saleType !== saleFilter) return false;
         if (onlyVerified && p.verificationStatus !== 'verified') return false;
+        if (onlySaved && !watchlistIds.includes(p.id)) return false;
         if (q) {
-          const haystack = `${p.title} ${p.description} ${p.sellerName} ${p.certificateId ?? ''} ${p.serialNumber ?? ''}`.toLowerCase();
+          const optText = p.options.map((o) => o.label).join(' ');
+          const haystack = `${p.title} ${p.description} ${p.sellerName} ${p.certificateId ?? ''} ${p.serialNumber ?? ''} ${optText}`.toLowerCase();
           if (!haystack.includes(q)) return false;
         }
         return true;
@@ -50,7 +56,7 @@ export const CatalogView: React.FC = () => {
         if (sortBy === 'price-desc') return b.currentPrice - a.currentPrice;
         return new Date(a.endTime).getTime() - new Date(b.endTime).getTime();
       });
-  }, [products, searchQuery, selectedCategory, saleFilter, onlyVerified, sortBy]);
+  }, [products, searchQuery, selectedCategory, saleFilter, onlyVerified, onlySaved, watchlistIds, sortBy]);
 
   const categories: { id: ProductCategory | 'all'; label: string }[] = [
     { id: 'all', label: 'ทั้งหมด' },
@@ -64,19 +70,19 @@ export const CatalogView: React.FC = () => {
     id === 'all' ? products.length : products.filter((p) => p.category === id).length;
 
   return (
-    <div className="space-y-12">
-      {/* Editorial Campaign Tile: Full-bleed image with towering Futura/Bebas Neue headline */}
+    <div className="space-y-12 animate-view-in">
+      {/* Editorial Campaign Tile */}
       <section className="relative w-full aspect-[4/5] sm:aspect-[16/7] bg-ink overflow-hidden rounded-none">
         <SafeImage
           src="https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=1600&q=85"
           alt="SomJing Verified Archive Campaign"
-          className="w-full h-full object-cover opacity-80"
+          className="w-full h-full object-cover opacity-80 card-image-zoom hover:scale-[1.02]"
         />
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 pointer-events-none"
           style={{
             background:
-              'linear-gradient(180deg, rgba(17,17,17,0.12) 0%, rgba(17,17,17,0.72) 100%)',
+              'linear-gradient(180deg, rgba(17,17,17,0.10) 0%, rgba(17,17,17,0.75) 100%)',
           }}
         />
         <div className="absolute inset-x-0 bottom-0 p-6 sm:p-10 lg:p-12 flex flex-col items-start gap-4 max-w-4xl">
@@ -122,7 +128,6 @@ export const CatalogView: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* Search Pill */}
             <div className="relative w-full sm:w-72">
               <Search className="w-4 h-4 text-ink absolute left-4 top-3 pointer-events-none" />
               <input
@@ -133,6 +138,15 @@ export const CatalogView: React.FC = () => {
                 className="search-pill w-full pl-10 pr-4 text-sm"
               />
             </div>
+
+            <button
+              type="button"
+              onClick={() => setOnlySaved((v) => !v)}
+              className={onlySaved ? 'filter-chip-active' : 'filter-chip'}
+            >
+              <Heart className={`w-4 h-4 ${onlySaved ? 'fill-current' : ''}`} />
+              <span>Saved ({watchlistIds.length})</span>
+            </button>
 
             <button
               type="button"
@@ -172,11 +186,10 @@ export const CatalogView: React.FC = () => {
           ))}
         </div>
 
-        {/* Main PLP Layout: 220px Filter Sidebar + 3-up Product Grid (8px gutter) */}
+        {/* Main PLP Layout: 220px Filter Sidebar + 3-up Product Grid */}
         <div className="flex flex-col lg:flex-row gap-8 items-start">
           {showFilters && (
-            <aside className="hidden lg:block w-[220px] shrink-0 space-y-6">
-              {/* Category Group */}
+            <aside className="hidden lg:block w-[220px] shrink-0 space-y-6 animate-fade-in">
               <div className="pb-6 border-b border-hairline space-y-3">
                 <h3 className="text-base font-medium text-ink">หมวดหมู่สินค้า</h3>
                 <ul className="space-y-2.5 text-sm font-medium">
@@ -202,7 +215,6 @@ export const CatalogView: React.FC = () => {
                 </ul>
               </div>
 
-              {/* Sale Mode Group */}
               <div className="pb-6 border-b border-hairline space-y-3">
                 <h3 className="text-base font-medium text-ink">รูปแบบการขาย</h3>
                 <ul className="space-y-2.5 text-sm font-medium">
@@ -228,22 +240,31 @@ export const CatalogView: React.FC = () => {
                 </ul>
               </div>
 
-              {/* Authenticity Group */}
               <div className="pb-6 border-b border-hairline space-y-3">
-                <h3 className="text-base font-medium text-ink">การรับรองความแท้</h3>
-                <button
-                  type="button"
-                  onClick={() => setOnlyVerified((v) => !v)}
-                  className={onlyVerified ? 'filter-chip-active' : 'filter-chip'}
-                >
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>Verified Only</span>
-                </button>
+                <h3 className="text-base font-medium text-ink">การรับรอง &amp; รายการโปรด</h3>
+                <div className="flex flex-col items-start gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setOnlyVerified((v) => !v)}
+                    className={onlyVerified ? 'filter-chip-active' : 'filter-chip'}
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Verified Only</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOnlySaved((v) => !v)}
+                    className={onlySaved ? 'filter-chip-active' : 'filter-chip'}
+                  >
+                    <Heart className={`w-4 h-4 ${onlySaved ? 'fill-current' : ''}`} />
+                    <span>Saved ({watchlistIds.length})</span>
+                  </button>
+                </div>
               </div>
             </aside>
           )}
 
-          {/* 3-up Product Grid with 8px gutter (gap-2) */}
+          {/* 3-up Product Grid */}
           <div className="flex-1 w-full">
             {filteredProducts.length === 0 ? (
               <div className="bg-soft-cloud p-12 text-center space-y-4">
@@ -258,6 +279,7 @@ export const CatalogView: React.FC = () => {
                       setSelectedCategory('all');
                       setSaleFilter('all');
                       setOnlyVerified(false);
+                      setOnlySaved(false);
                     }}
                     className="btn-secondary"
                   >
@@ -274,14 +296,25 @@ export const CatalogView: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {filteredProducts.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    nowMs={nowMs}
-                    onSelect={() => setSelectedProductId(product.id)}
-                  />
-                ))}
+                {filteredProducts.map((product) => {
+                  const activeOption = getSelectedOptionForProduct(product);
+                  return (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      activeOptionId={activeOption.id}
+                      activeOptionLabel={activeOption.label}
+                      activeImageIndex={activeOption.imageIndex}
+                      isSaved={watchlistIds.includes(product.id)}
+                      nowMs={nowMs}
+                      onToggleSave={() => toggleWatchlist(product.id)}
+                      onSelectOption={(optionId) =>
+                        setProductSelectedOption(product.id, optionId)
+                      }
+                      onSelect={() => setSelectedProductId(product.id)}
+                    />
+                  );
+                })}
               </div>
             )}
           </div>
@@ -293,11 +326,27 @@ export const CatalogView: React.FC = () => {
 
 const ProductCard: React.FC<{
   product: Product;
+  activeOptionId: string;
+  activeOptionLabel: string;
+  activeImageIndex: number;
+  isSaved: boolean;
   nowMs: number;
+  onToggleSave: () => void;
+  onSelectOption: (optionId: string) => void;
   onSelect: () => void;
-}> = ({ product, nowMs, onSelect }) => {
+}> = ({
+  product,
+  activeOptionId,
+  activeOptionLabel,
+  activeImageIndex,
+  isSaved,
+  nowMs,
+  onToggleSave,
+  onSelectOption,
+  onSelect,
+}) => {
   const countdown = getCountdownParts(product.endTime, nowMs);
-  const swatches = SWATCH_PALETTES[product.category];
+  const displayedImage = product.images[activeImageIndex] || product.images[0];
 
   return (
     <article
@@ -307,9 +356,9 @@ const ProductCard: React.FC<{
       {/* 1:1 Full-bleed photo on #f5f5f5 soft-cloud stage */}
       <div className="relative aspect-square w-full bg-soft-cloud overflow-hidden rounded-none">
         <SafeImage
-          src={product.images[0]}
+          src={displayedImage}
           alt={product.title}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover card-image-zoom group-hover:scale-[1.03]"
         />
 
         {/* Promo Badge Top-Left */}
@@ -326,6 +375,19 @@ const ProductCard: React.FC<{
           )}
         </div>
 
+        {/* Watchlist Heart Toggle Top-Right */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSave();
+          }}
+          aria-label={isSaved ? 'นำออกจากรายการโปรด' : 'บันทึกในรายการโปรด'}
+          className="btn-icon-circular absolute top-3 right-3 bg-canvas/90 hover:bg-canvas"
+        >
+          <Heart className={`w-4 h-4 ${isSaved ? 'fill-sale text-sale' : 'text-ink'}`} />
+        </button>
+
         {product.status === 'sold' && (
           <div className="absolute inset-0 bg-ink/55 flex items-center justify-center">
             <span className="badge-promo">Escrow Locked</span>
@@ -333,22 +395,35 @@ const ProductCard: React.FC<{
         )}
       </div>
 
-      {/* Zero card horizontal padding; 8px vertical spacing between metadata rows */}
+      {/* Metadata rows synced with PDP */}
       <div className="pt-3 pb-8 space-y-2">
-        {/* Swatch Dots Row */}
+        {/* Interactive Swatch / Option Dots Row */}
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            {swatches.map((hex, i) => (
-              <span
-                key={hex + i}
-                className={`w-3 h-3 rounded-full inline-block ${
-                  i === 0
-                    ? 'ring-2 ring-ink ring-offset-2 ring-offset-canvas'
-                    : 'border border-hairline'
-                }`}
-                style={{ backgroundColor: hex }}
-              />
-            ))}
+          <div className="flex items-center gap-2.5">
+            {product.options.map((opt) => {
+              const selected = opt.id === activeOptionId;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  title={opt.label}
+                  aria-label={`เลือกตัวเลือก ${opt.label}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectOption(opt.id);
+                  }}
+                  className={`w-3.5 h-3.5 rounded-full transition-all ${
+                    selected
+                      ? 'ring-2 ring-ink ring-offset-2 ring-offset-canvas'
+                      : 'border border-hairline hover:scale-110'
+                  }`}
+                  style={{ backgroundColor: opt.colorHex }}
+                />
+              );
+            })}
+            <span className="text-xs text-mute font-medium truncate max-w-[140px]">
+              {product.options.length} ตัวเลือก
+            </span>
           </div>
           {product.verificationStatus === 'verified' && (
             <span className="text-xs font-medium text-success font-mono">
@@ -358,16 +433,16 @@ const ProductCard: React.FC<{
         </div>
 
         {/* Title */}
-        <h3 className="text-base font-medium text-ink leading-[1.5] line-clamp-2">
+        <h3 className="text-base font-medium text-ink leading-[1.5] line-clamp-2 group-hover:text-charcoal transition-colors">
           {product.title}
         </h3>
 
-        {/* Subtitle */}
-        <p className="text-sm font-medium text-mute leading-[1.5]">
-          {CATEGORY_LABELS[product.category]} · {product.condition}
+        {/* Selected Option & Category Subtitle (Consistent with Detail Page) */}
+        <p className="text-sm font-medium text-mute leading-[1.4] truncate">
+          {activeOptionLabel} · {CATEGORY_LABELS[product.category]}
         </p>
 
-        {/* Price + Inline Sale/Auction Countdown (no badge background) */}
+        {/* Price + Inline Sale/Auction Countdown */}
         <div className="flex items-baseline flex-wrap gap-x-3 gap-y-1 pt-0.5">
           <span className="text-base font-medium text-ink font-mono tabular-nums">
             {formatTHB(product.currentPrice)}

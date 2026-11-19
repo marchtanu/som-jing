@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Banknote,
@@ -10,7 +10,7 @@ import {
   Truck,
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
-import { EscrowOrder, EscrowStatus } from '../types';
+import { EscrowOrder, EscrowStatus, UserRole } from '../types';
 import { formatTHB, formatThaiDateTime } from '../utils/format';
 import { SafeImage, VerificationBadge } from './ui';
 
@@ -32,14 +32,34 @@ function getStepIndex(status: EscrowStatus): number {
 export const EscrowView: React.FC = () => {
   const {
     escrowOrders,
+    currentUser,
     markOrderShipped,
     confirmOrderReceived,
     releaseEscrowFunds,
     fileComplaint,
     setActiveTab,
+    setAuthModalOpen,
   } = useStore();
 
-  const totalHeldAmount = escrowOrders
+  const [scope, setScope] = useState<'all' | 'buying' | 'selling'>('all');
+
+  const isAdmin = currentUser?.role === 'admin';
+
+  const visibleOrders = useMemo(() => {
+    if (!currentUser) return [];
+    return escrowOrders.filter((o) => {
+      if (isAdmin) {
+        if (scope === 'buying') return o.buyerId === currentUser.id;
+        if (scope === 'selling') return o.sellerId === currentUser.id;
+        return true;
+      }
+      if (scope === 'buying') return o.buyerId === currentUser.id;
+      if (scope === 'selling') return o.sellerId === currentUser.id;
+      return o.buyerId === currentUser.id || o.sellerId === currentUser.id;
+    });
+  }, [escrowOrders, currentUser, isAdmin, scope]);
+
+  const totalHeldAmount = visibleOrders
     .filter(
       (o) =>
         o.status === 'held' ||
@@ -49,19 +69,19 @@ export const EscrowView: React.FC = () => {
     )
     .reduce((sum, o) => sum + o.totalPaid, 0);
 
-  const totalReleasedAmount = escrowOrders
+  const totalReleasedAmount = visibleOrders
     .filter((o) => o.status === 'released')
     .reduce((sum, o) => sum + o.amount, 0);
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-12 animate-view-in">
       <div className="pb-6 border-b border-hairline flex flex-col sm:flex-row sm:items-end justify-between gap-6">
         <div>
           <h1 className="text-[32px] font-medium leading-[1.2] text-ink">
             ระบบพักเงิน Escrow Tracker
           </h1>
           <p className="text-base text-mute mt-1">
-            วงจรคุ้มครองธุรกรรม 4 ขั้นตอน: พักเงิน → จัดส่ง → ยืนยันรับของ → ปล่อยเงิน
+            วงจรคุ้มครองธุรกรรม 4 ขั้นตอน: พักเงิน → จัดส่ง (ผู้ขาย) → ยืนยันรับของ (ผู้ซื้อ) → ปล่อยเงิน
           </p>
         </div>
 
@@ -81,31 +101,75 @@ export const EscrowView: React.FC = () => {
         </div>
       </div>
 
-      {escrowOrders.length === 0 ? (
+      {!currentUser ? (
         <div className="bg-soft-cloud p-12 text-center space-y-4">
-          <p className="text-base font-medium text-ink">ยังไม่มีคำสั่งซื้อในระบบ Escrow</p>
+          <p className="text-base font-medium text-ink">
+            กรุณาเข้าสู่ระบบเพื่อดูคำสั่งซื้อและสถานะการพักเงิน Escrow ของคุณ
+          </p>
           <button
             type="button"
-            onClick={() => setActiveTab('catalog')}
+            onClick={() => setAuthModalOpen(true)}
             className="btn-primary"
           >
-            เลือกสินค้าเพื่อทดสอบชำระเงิน
+            เข้าสู่ระบบ
           </button>
         </div>
       ) : (
-        <div className="divide-y divide-hairline border-b border-hairline">
-          {escrowOrders.map((order) => (
-            <EscrowOrderCard
-              key={order.id}
-              order={order}
-              onShip={markOrderShipped}
-              onConfirmReceive={confirmOrderReceived}
-              onRelease={releaseEscrowFunds}
-              onDispute={fileComplaint}
-              onGoAdmin={() => setActiveTab('admin')}
-            />
-          ))}
-        </div>
+        <>
+          {/* Filter Tabs */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setScope('all')}
+              className={scope === 'all' ? 'filter-chip-active' : 'filter-chip'}
+            >
+              {isAdmin ? 'คำสั่งซื้อทั้งหมดในระบบ' : 'ทั้งหมดที่เกี่ยวข้องกับฉัน'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setScope('buying')}
+              className={scope === 'buying' ? 'filter-chip-active' : 'filter-chip'}
+            >
+              รายการที่ฉันซื้อ (Buying)
+            </button>
+            <button
+              type="button"
+              onClick={() => setScope('selling')}
+              className={scope === 'selling' ? 'filter-chip-active' : 'filter-chip'}
+            >
+              รายการที่ฉันขาย (Selling)
+            </button>
+          </div>
+
+          {visibleOrders.length === 0 ? (
+            <div className="bg-soft-cloud p-12 text-center space-y-4">
+              <p className="text-base font-medium text-ink">ยังไม่มีคำสั่งซื้อในหมวดนี้</p>
+              <button
+                type="button"
+                onClick={() => setActiveTab('catalog')}
+                className="btn-primary"
+              >
+                เลือกสินค้าเพื่อสั่งซื้อผ่าน Escrow
+              </button>
+            </div>
+          ) : (
+            <div className="divide-y divide-hairline border-b border-hairline">
+              {visibleOrders.map((order) => (
+                <EscrowOrderCard
+                  key={order.id}
+                  order={order}
+                  currentUserId={currentUser.id}
+                  currentUserRole={currentUser.role}
+                  onShip={markOrderShipped}
+                  onConfirmReceive={confirmOrderReceived}
+                  onRelease={releaseEscrowFunds}
+                  onDispute={fileComplaint}
+                  onGoAdmin={() => setActiveTab('admin')}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -113,12 +177,23 @@ export const EscrowView: React.FC = () => {
 
 const EscrowOrderCard: React.FC<{
   order: EscrowOrder;
+  currentUserId: string;
+  currentUserRole: UserRole;
   onShip: (orderId: string, courier: string, tracking: string) => void;
   onConfirmReceive: (orderId: string) => void;
   onRelease: (orderId: string) => void;
   onDispute: (input: { orderId: string; reason: string; description: string }) => void;
   onGoAdmin: () => void;
-}> = ({ order, onShip, onConfirmReceive, onRelease, onDispute, onGoAdmin }) => {
+}> = ({
+  order,
+  currentUserId,
+  currentUserRole,
+  onShip,
+  onConfirmReceive,
+  onRelease,
+  onDispute,
+  onGoAdmin,
+}) => {
   const [courier, setCourier] = useState('Kerry Express (Insured)');
   const [tracking, setTracking] = useState(`SJTH${String(Date.now()).slice(-7)}`);
   const [showDisputeForm, setShowDisputeForm] = useState(false);
@@ -126,6 +201,9 @@ const EscrowOrderCard: React.FC<{
   const [disputeDesc, setDisputeDesc] = useState('');
 
   const stepIndex = getStepIndex(order.status);
+  const isBuyer = currentUserId === order.buyerId;
+  const isSeller = currentUserId === order.sellerId;
+  const isAdmin = currentUserRole === 'admin';
 
   const handleShipSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,6 +238,9 @@ const EscrowOrderCard: React.FC<{
               <span className="font-mono text-xs font-medium text-ink border border-hairline px-2.5 py-0.5 rounded-lg">
                 {order.orderNumber}
               </span>
+              <span className="badge-promo">
+                {isBuyer ? 'ผู้ซื้อ (Buying)' : isSeller ? 'ผู้ขาย (Selling)' : 'Admin View'}
+              </span>
               <VerificationBadge
                 status={order.isVerifiedItem ? 'verified' : 'unverified'}
                 certificateId={order.certificateId}
@@ -168,10 +249,20 @@ const EscrowOrderCard: React.FC<{
               <span className="text-xs text-mute">{order.paymentMethod}</span>
             </div>
             <h2 className="text-lg font-medium text-ink">{order.productTitle}</h2>
+            {order.selectedOptionLabel && (
+              <p className="text-xs font-medium text-charcoal">
+                ตัวเลือก: {order.selectedOptionLabel}
+              </p>
+            )}
             <p className="text-sm text-mute">
-              Buyer: <span className="text-ink">{order.buyerName}</span> · Seller:{' '}
+              ผู้ซื้อ: <span className="text-ink">{order.buyerName}</span> · ผู้ขาย:{' '}
               <span className="text-ink">{order.sellerName}</span>
             </p>
+            {order.shippingAddress && (
+              <p className="text-xs text-mute">
+                ที่อยู่จัดส่ง: <span className="text-charcoal">{order.shippingAddress}</span>
+              </p>
+            )}
           </div>
         </div>
 
@@ -204,9 +295,9 @@ const EscrowOrderCard: React.FC<{
               <p className="text-mute">ผู้ดูแลระบบกำลังตรวจสอบหลักฐานระหว่างผู้ซื้อและผู้ขาย</p>
             </div>
           </div>
-          {order.status === 'disputed' && (
+          {order.status === 'disputed' && isAdmin && (
             <button type="button" onClick={onGoAdmin} className="btn-primary h-10 px-5 text-sm shrink-0">
-              ไปหน้าแอดมินตัดสินข้อร้องเรียน
+              ตัดสินข้อร้องเรียนใน Admin Console
             </button>
           )}
         </div>
@@ -258,119 +349,143 @@ const EscrowOrderCard: React.FC<{
         </div>
       )}
 
-      {/* Action Controls per step */}
-      {order.status === 'held' && (
-        <form
-          onSubmit={handleShipSubmit}
-          className="bg-soft-cloud p-5 flex flex-col sm:flex-row items-stretch sm:items-end gap-3"
-        >
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-mute mb-1.5">บริษัทขนส่ง</label>
-            <select
-              value={courier}
-              onChange={(e) => setCourier(e.target.value)}
-              className="hairline-input w-full bg-canvas"
-            >
-              <option>Kerry Express (Insured)</option>
-              <option>Flash Express (Insured)</option>
-              <option>Thailand Post EMS</option>
-              <option>SomJing Messenger (กทม.)</option>
-            </select>
-          </div>
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-mute mb-1.5">เลขพัสดุ (Tracking)</label>
-            <input
-              type="text"
-              required
-              value={tracking}
-              onChange={(e) => setTracking(e.target.value)}
-              className="hairline-input w-full font-mono bg-canvas"
-            />
-          </div>
-          <button type="submit" className="btn-primary shrink-0">
-            <Truck className="w-4 h-4" />
-            <span>ขั้นที่ 2: แจ้งจัดส่งสินค้า</span>
-          </button>
-        </form>
-      )}
-
-      {order.status === 'shipped' && (
-        <div className="bg-soft-cloud p-5 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-charcoal">
-              สินค้าอยู่ระหว่างจัดส่ง — กดยืนยันรับของเมื่อตรวจสภาพถูกต้อง หรือยื่นข้อร้องเรียนหากพบปัญหา
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setShowDisputeForm((v) => !v)}
-                className="btn-secondary bg-canvas border border-hairline"
+      {/* Role-Enforced Action Controls */}
+      {order.status === 'held' &&
+        (isSeller || isAdmin ? (
+          <form
+            onSubmit={handleShipSubmit}
+            className="bg-soft-cloud p-5 flex flex-col sm:flex-row items-stretch sm:items-end gap-3"
+          >
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-mute mb-1.5">บริษัทขนส่ง</label>
+              <select
+                value={courier}
+                onChange={(e) => setCourier(e.target.value)}
+                className="hairline-input w-full bg-canvas"
               >
-                <AlertTriangle className="w-4 h-4 text-sale" />
-                <span>แจ้งปัญหา / ร้องเรียน</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onConfirmReceive(order.id)}
-                className="btn-primary"
-              >
-                <PackageCheck className="w-4 h-4" />
-                <span>ขั้นที่ 3: ยืนยันรับของถูกต้อง</span>
-              </button>
+                <option>Kerry Express (Insured)</option>
+                <option>Flash Express (Insured)</option>
+                <option>Thailand Post EMS</option>
+                <option>SomJing Messenger (กทม.)</option>
+              </select>
             </div>
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-mute mb-1.5">เลขพัสดุ (Tracking)</label>
+              <input
+                type="text"
+                required
+                value={tracking}
+                onChange={(e) => setTracking(e.target.value)}
+                className="hairline-input w-full font-mono bg-canvas"
+              />
+            </div>
+            <button type="submit" className="btn-primary shrink-0">
+              <Truck className="w-4 h-4" />
+              <span>ยืนยันการจัดส่งสินค้า</span>
+            </button>
+          </form>
+        ) : (
+          <div className="bg-soft-cloud p-4 text-sm text-charcoal flex items-center gap-3">
+            <Clock className="w-4 h-4 text-ink shrink-0" />
+            <span>
+              พักเงินใน Escrow เรียบร้อยแล้ว — กำลังรอผู้ขาย (
+              <strong className="text-ink">{order.sellerName}</strong>) แพ็กสินค้าและกรอกเลขพัสดุ
+            </span>
           </div>
+        ))}
 
-          {showDisputeForm && (
-            <form onSubmit={handleDisputeSubmit} className="pt-4 border-t border-hairline space-y-3">
-              <div className="grid sm:grid-cols-2 gap-3">
-                <select
-                  value={disputeReason}
-                  onChange={(e) => setDisputeReason(e.target.value)}
-                  className="hairline-input bg-canvas"
+      {order.status === 'shipped' &&
+        (isBuyer || isAdmin ? (
+          <div className="bg-soft-cloud p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-charcoal">
+                สินค้าอยู่ระหว่างจัดส่ง — กดยืนยันรับของเมื่อตรวจสภาพถูกต้อง หรือยื่นข้อร้องเรียนหากพบปัญหา
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDisputeForm((v) => !v)}
+                  className="btn-secondary bg-canvas border border-hairline"
                 >
-                  <option>สินค้าไม่ตรงตามรูป / ตำหนิไม่ได้แจ้ง</option>
-                  <option>สงสัยว่าไม่ใช่ของแท้ (ต้องการให้ทีมตรวจซ้ำ)</option>
-                  <option>พัสดุเสียหายระหว่างขนส่ง</option>
-                  <option>ไม่ได้รับสินค้าตามกำหนด</option>
-                </select>
-                <input
-                  type="text"
-                  required
-                  value={disputeDesc}
-                  onChange={(e) => setDisputeDesc(e.target.value)}
-                  placeholder="อธิบายรายละเอียดปัญหาที่พบ..."
-                  className="hairline-input bg-canvas"
-                />
-              </div>
-              <div className="flex justify-end">
-                <button type="submit" className="btn-primary">
-                  ส่งคำร้องเรียน &amp; ระงับเงิน Escrow
+                  <AlertTriangle className="w-4 h-4 text-sale" />
+                  <span>แจ้งปัญหา / ร้องเรียน</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onConfirmReceive(order.id)}
+                  className="btn-primary"
+                >
+                  <PackageCheck className="w-4 h-4" />
+                  <span>ยืนยันรับของถูกต้อง</span>
                 </button>
               </div>
-            </form>
-          )}
-        </div>
-      )}
+            </div>
 
-      {order.status === 'received' && (
-        <div className="bg-soft-cloud p-5 flex flex-wrap items-center justify-between gap-4">
-          <div className="text-sm">
-            <p className="font-medium text-ink">ผู้ซื้อยืนยันรับสินค้าเรียบร้อยแล้ว</p>
-            <p className="text-mute">
-              พร้อมโอนยอดสุทธิ <span className="font-mono text-ink">{formatTHB(order.amount)}</span>{' '}
-              ออกจากบัญชีพักเงินให้ผู้ขาย
-            </p>
+            {showDisputeForm && (
+              <form onSubmit={handleDisputeSubmit} className="pt-4 border-t border-hairline space-y-3">
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <select
+                    value={disputeReason}
+                    onChange={(e) => setDisputeReason(e.target.value)}
+                    className="hairline-input bg-canvas"
+                  >
+                    <option>สินค้าไม่ตรงตามรูป / ตำหนิไม่ได้แจ้ง</option>
+                    <option>สงสัยว่าไม่ใช่ของแท้ (ต้องการให้ทีมตรวจซ้ำ)</option>
+                    <option>พัสดุเสียหายระหว่างขนส่ง</option>
+                    <option>ไม่ได้รับสินค้าตามกำหนด</option>
+                  </select>
+                  <input
+                    type="text"
+                    required
+                    value={disputeDesc}
+                    onChange={(e) => setDisputeDesc(e.target.value)}
+                    placeholder="อธิบายรายละเอียดปัญหาที่พบ..."
+                    className="hairline-input bg-canvas"
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <button type="submit" className="btn-primary">
+                    ส่งคำร้องเรียน &amp; ระงับเงิน Escrow
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
-          <button
-            type="button"
-            onClick={() => onRelease(order.id)}
-            className="btn-primary shrink-0"
-          >
-            <Banknote className="w-4 h-4" />
-            <span>ขั้นที่ 4: ปล่อยเงินให้ผู้ขาย</span>
-          </button>
-        </div>
-      )}
+        ) : (
+          <div className="bg-soft-cloud p-4 text-sm text-charcoal flex items-center gap-3">
+            <Truck className="w-4 h-4 text-ink shrink-0" />
+            <span>
+              จัดส่งสินค้าเรียบร้อยแล้ว — กำลังรอผู้ซื้อ (
+              <strong className="text-ink">{order.buyerName}</strong>) ตรวจรับสินค้าเพื่อปล่อยเงิน
+            </span>
+          </div>
+        ))}
+
+      {order.status === 'received' &&
+        (isBuyer || isAdmin ? (
+          <div className="bg-soft-cloud p-5 flex flex-wrap items-center justify-between gap-4">
+            <div className="text-sm">
+              <p className="font-medium text-ink">ผู้ซื้อยืนยันรับสินค้าเรียบร้อยแล้ว</p>
+              <p className="text-mute">
+                พร้อมโอนยอดสุทธิ <span className="font-mono text-ink">{formatTHB(order.amount)}</span>{' '}
+                ออกจากบัญชีพักเงินให้ผู้ขาย
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => onRelease(order.id)}
+              className="btn-primary shrink-0"
+            >
+              <Banknote className="w-4 h-4" />
+              <span>อนุมัติปล่อยเงินให้ผู้ขาย</span>
+            </button>
+          </div>
+        ) : (
+          <div className="bg-soft-cloud p-4 text-sm text-charcoal flex items-center gap-3">
+            <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+            <span>ผู้ซื้อยืนยันรับของแล้ว — กำลังรอระบบดำเนินการปล่อยเงิน</span>
+          </div>
+        ))}
 
       {/* Audit Log */}
       <div className="space-y-2.5 pt-2">

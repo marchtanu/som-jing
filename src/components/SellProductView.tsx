@@ -1,29 +1,33 @@
 import React, { useState } from 'react';
-import { CheckCircle2, ImagePlus, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, ImagePlus, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
-import { Product, ProductCategory } from '../types';
+import { Product, ProductCategory, ProductOption } from '../types';
 import { CATEGORY_LABELS, formatTHB } from '../utils/format';
 import { SafeImage, VerificationBadge } from './ui';
 
-const PRESET_IMAGES: { label: string; url: string; category: ProductCategory }[] = [
+const PRESET_IMAGES: { label: string; url: string; secondaryUrl: string; category: ProductCategory }[] = [
   {
     label: 'Art Toy',
     url: 'https://images.unsplash.com/photo-1608889476561-6242cfdbf622?auto=format&fit=crop&w=900&q=80',
+    secondaryUrl: 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?auto=format&fit=crop&w=900&q=80',
     category: 'art-toys',
   },
   {
     label: 'Sneakers',
     url: 'https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=900&q=80',
+    secondaryUrl: 'https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?auto=format&fit=crop&w=900&q=80',
     category: 'sneakers',
   },
   {
     label: 'Retro Camera',
     url: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=900&q=80',
+    secondaryUrl: 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&w=900&q=80',
     category: 'gadgets',
   },
   {
     label: 'Watch',
     url: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=900&q=80',
+    secondaryUrl: 'https://images.unsplash.com/photo-1524805444758-089113d48a6d?auto=format&fit=crop&w=900&q=80',
     category: 'watches',
   },
 ];
@@ -41,16 +45,65 @@ export const SellProductView: React.FC = () => {
   const [durationHours, setDurationHours] = useState('24');
   const [serialNumber, setSerialNumber] = useState('');
   const [imageUrl, setImageUrl] = useState(PRESET_IMAGES[0].url);
+  const [secondaryImageUrl, setSecondaryImageUrl] = useState(PRESET_IMAGES[0].secondaryUrl);
   const [description, setDescription] = useState('');
   const [requestVerify, setRequestVerify] = useState(true);
   const [purchaseProofNote, setPurchaseProofNote] = useState('');
   const [createdProduct, setCreatedProduct] = useState<Product | null>(null);
+
+  const [optionInputs, setOptionInputs] = useState<ProductOption[]>([
+    {
+      id: 'draft-opt-1',
+      label: 'Standard Full Set (กล่องครบ)',
+      colorHex: '#111111',
+      spec: 'อุปกรณ์มาตรฐานจากช็อปครบชุด',
+      imageIndex: 0,
+    },
+    {
+      id: 'draft-opt-2',
+      label: 'Collector Bundle (+เคสกันรอย)',
+      colorHex: '#707072',
+      spec: 'เพิ่มเคสป้องกันสำหรับนักสะสม',
+      imageIndex: 1,
+    },
+  ]);
+
+  const handleAddOption = () => {
+    setOptionInputs((prev) => [
+      ...prev,
+      {
+        id: `draft-opt-${Date.now()}`,
+        label: `ตัวเลือกที่ ${prev.length + 1}`,
+        colorHex: '#007d48',
+        spec: 'รายละเอียดเพิ่มเติม',
+        imageIndex: prev.length % 2,
+      },
+    ]);
+  };
+
+  const handleUpdateOption = (idx: number, patch: Partial<ProductOption>) => {
+    setOptionInputs((prev) =>
+      prev.map((opt, i) => (i === idx ? { ...opt, ...patch } : opt))
+    );
+  };
+
+  const handleRemoveOption = (idx: number) => {
+    if (optionInputs.length <= 1) return;
+    setOptionInputs((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
 
     const parsedStart = Math.max(100, Number(startPrice) || 1000);
+    const cleanedOptions = optionInputs.map((opt, i) => ({
+      ...opt,
+      id: `opt-${Date.now()}-${i}`,
+      label: opt.label.trim() || `ตัวเลือก ${i + 1}`,
+      spec: opt.spec.trim() || 'อุปกรณ์ครบตามภาพ',
+    }));
+
     const created = createProduct({
       title: title.trim(),
       category,
@@ -59,6 +112,8 @@ export const SellProductView: React.FC = () => {
         description.trim() ||
         'สินค้าสะสมสภาพดี พร้อมส่งและคุ้มครองผ่านระบบพักเงิน SomJing Escrow',
       imageUrl: imageUrl.trim(),
+      secondaryImageUrl: secondaryImageUrl.trim(),
+      options: cleanedOptions,
       saleType,
       startPrice: parsedStart,
       buyNowPrice:
@@ -72,11 +127,13 @@ export const SellProductView: React.FC = () => {
       purchaseProofNote: purchaseProofNote.trim(),
     });
 
-    setCreatedProduct(created);
-    setTitle('');
-    setSerialNumber('');
-    setDescription('');
-    setPurchaseProofNote('');
+    if (created) {
+      setCreatedProduct(created);
+      setTitle('');
+      setSerialNumber('');
+      setDescription('');
+      setPurchaseProofNote('');
+    }
   };
 
   const myListings = products.filter((p) =>
@@ -84,18 +141,18 @@ export const SellProductView: React.FC = () => {
   );
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-12 animate-view-in">
       <div className="pb-6 border-b border-hairline">
         <h1 className="text-[32px] font-medium leading-[1.2] text-ink">
           ลงขายสินค้า &amp; เปิดรอบประมูล
         </h1>
         <p className="text-base text-mute mt-1">
-          สร้างประกาศขายแบบราคาคงที่หรือเปิดประมูลสด พร้อมส่งคำขอรับรองความแท้ (Verified Badge) ได้ทันที
+          สร้างประกาศขายแบบราคาคงที่หรือเปิดประมูลสด กำหนดตัวเลือกสินค้า และส่งคำขอ Verify ความแท้ได้ทันที
         </p>
       </div>
 
       {createdProduct && (
-        <div className="bg-soft-cloud p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="bg-soft-cloud p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fade-in">
           <div className="flex items-start gap-3">
             <CheckCircle2 className="w-5 h-5 text-success shrink-0 mt-0.5" />
             <div className="text-sm">
@@ -104,7 +161,7 @@ export const SellProductView: React.FC = () => {
               </p>
               <p className="text-mute mt-0.5">
                 {createdProduct.verificationStatus === 'pending'
-                  ? 'คำขอ Verify ถูกส่งไปยังหน้าแอดมินแล้ว สามารถสลับไปหน้าแอดมินเพื่อกดอนุมัติได้ทันที'
+                  ? 'คำขอ Verify ถูกส่งเข้าคิวผู้ตรวจสอบระบบแล้ว สามารถติดตามผลได้ที่หน้า ขอ Verify'
                   : 'สินค้าแสดงบนหน้าตลาดกลางเรียบร้อย'}
               </p>
             </div>
@@ -123,10 +180,10 @@ export const SellProductView: React.FC = () => {
             {createdProduct.verificationStatus === 'pending' && (
               <button
                 type="button"
-                onClick={() => setActiveTab('admin')}
+                onClick={() => setActiveTab('verify')}
                 className="filter-chip"
               >
-                ไปหน้าแอดมินอนุมัติ Verify
+                เช็คสถานะ Verify
               </button>
             )}
           </div>
@@ -246,9 +303,7 @@ export const SellProductView: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-ink mb-2">
-                  ระยะเวลาประมูล
-                </label>
+                <label className="block text-sm font-medium text-ink mb-2">ระยะเวลาประมูล</label>
                 <select
                   value={durationHours}
                   onChange={(e) => setDurationHours(e.target.value)}
@@ -263,6 +318,69 @@ export const SellProductView: React.FC = () => {
             </div>
           )}
 
+          {/* Product Options Editor */}
+          <div className="border border-hairline p-5 space-y-4">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-medium text-ink">
+                  ตัวเลือกสินค้า (Options / Editions)
+                </h2>
+                <p className="text-xs text-mute">
+                  ตัวเลือกเหล่านี้จะแสดงทั้งบนการ์ดสินค้าและหน้าสินค้าประมูลให้ผู้ซื้อเลือกได้จริง
+                </p>
+              </div>
+              <button type="button" onClick={handleAddOption} className="filter-chip text-xs">
+                <Plus className="w-3.5 h-3.5" />
+                <span>เพิ่มตัวเลือก</span>
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {optionInputs.map((opt, idx) => (
+                <div key={opt.id} className="bg-soft-cloud p-3 grid sm:grid-cols-12 gap-2 items-center">
+                  <div className="sm:col-span-5">
+                    <input
+                      type="text"
+                      required
+                      value={opt.label}
+                      onChange={(e) => handleUpdateOption(idx, { label: e.target.value })}
+                      placeholder="ชื่อตัวเลือก เช่น US 9.5 / Full Set"
+                      className="hairline-input w-full text-xs py-1.5 bg-canvas"
+                    />
+                  </div>
+                  <div className="sm:col-span-5">
+                    <input
+                      type="text"
+                      value={opt.spec}
+                      onChange={(e) => handleUpdateOption(idx, { spec: e.target.value })}
+                      placeholder="รายละเอียดตัวเลือก"
+                      className="hairline-input w-full text-xs py-1.5 bg-canvas"
+                    />
+                  </div>
+                  <div className="sm:col-span-2 flex items-center justify-end gap-2">
+                    <input
+                      type="color"
+                      value={opt.colorHex}
+                      onChange={(e) => handleUpdateOption(idx, { colorHex: e.target.value })}
+                      className="w-7 h-7 rounded-full border border-hairline cursor-pointer bg-canvas"
+                      title="สี Swatch"
+                    />
+                    {optionInputs.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveOption(idx)}
+                        className="p-1.5 text-mute hover:text-sale"
+                        aria-label="ลบตัวเลือก"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="space-y-2.5">
             <label className="block text-sm font-medium text-ink">
               ภาพถ่ายสินค้า (เลือกภาพตัวอย่างหรือวาง URL)
@@ -274,6 +392,7 @@ export const SellProductView: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setImageUrl(preset.url);
+                    setSecondaryImageUrl(preset.secondaryUrl);
                     setCategory(preset.category);
                   }}
                   className={imageUrl === preset.url ? 'filter-chip-active' : 'filter-chip'}
@@ -287,6 +406,7 @@ export const SellProductView: React.FC = () => {
               type="url"
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
+              placeholder="URL ภาพหลัก"
               className="hairline-input w-full font-mono text-xs"
             />
           </div>
@@ -318,7 +438,6 @@ export const SellProductView: React.FC = () => {
             </div>
           </div>
 
-          {/* Request Verify Checkbox */}
           <div className="bg-soft-cloud p-5 space-y-3">
             <label className="flex items-start gap-3 cursor-pointer">
               <input
@@ -333,7 +452,7 @@ export const SellProductView: React.FC = () => {
                   <span>ส่งคำขอตรวจรับรองความแท้ (SomJing Verified Badge) ทันที</span>
                 </p>
                 <p className="text-xs text-mute mt-0.5">
-                  สินค้าที่ผ่าน Verify จะได้รับตรารับรองและเลข Certificate ID เมื่อแอดมินอนุมัติ
+                  ทีมตรวจสอบของระบบจะพิจารณาหลักฐานและออกเลข Certificate ID ให้เมื่อผ่านเกณฑ์
                 </p>
               </div>
             </label>
@@ -354,7 +473,7 @@ export const SellProductView: React.FC = () => {
           </button>
         </form>
 
-        {/* Right: Nike-style 1:1 Card Preview & Recent Listings */}
+        {/* Right: 1:1 Card Preview & Listings */}
         <div className="lg:col-span-5 space-y-8">
           <div className="space-y-3">
             <h2 className="text-base font-medium text-ink">ตัวอย่างการ์ดสินค้า (Live Preview)</h2>
@@ -369,11 +488,27 @@ export const SellProductView: React.FC = () => {
                   <VerificationBadge status={requestVerify ? 'pending' : 'unverified'} compact />
                 </div>
               </div>
-              <div className="pt-3 space-y-1.5">
+              <div className="pt-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  {optionInputs.map((opt, idx) => (
+                    <span
+                      key={opt.id}
+                      className={`w-3.5 h-3.5 rounded-full inline-block ${
+                        idx === 0
+                          ? 'ring-2 ring-ink ring-offset-2 ring-offset-canvas'
+                          : 'border border-hairline'
+                      }`}
+                      style={{ backgroundColor: opt.colorHex }}
+                    />
+                  ))}
+                  <span className="text-xs text-mute">{optionInputs.length} ตัวเลือก</span>
+                </div>
                 <p className="text-base font-medium text-ink line-clamp-2">
                   {title || 'ชื่อสินค้าของคุณจะแสดงที่นี่'}
                 </p>
-                <p className="text-sm font-medium text-mute">{CATEGORY_LABELS[category]}</p>
+                <p className="text-sm font-medium text-mute">
+                  {optionInputs[0]?.label} · {CATEGORY_LABELS[category]}
+                </p>
                 <p className="text-base font-medium font-mono text-ink">
                   {formatTHB(Number(startPrice) || 0)}
                 </p>

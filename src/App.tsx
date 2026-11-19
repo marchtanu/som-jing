@@ -7,6 +7,7 @@ import { CatalogView } from './components/CatalogView';
 import { EscrowView } from './components/EscrowView';
 import { Navbar } from './components/Navbar';
 import { PaymentModal } from './components/PaymentModal';
+import { PolicyModal } from './components/PolicyModal';
 import { ReportView } from './components/ReportView';
 import { SellProductView } from './components/SellProductView';
 import { ToastContainer } from './components/ui';
@@ -14,7 +15,14 @@ import { VerifyRequestView } from './components/VerifyRequestView';
 import { WantedBoardView } from './components/WantedBoardView';
 
 const MainShell: React.FC = () => {
-  const { activeTab, selectedProductId, setActiveTab, setSelectedProductId } = useStore();
+  const {
+    activeTab,
+    selectedProductId,
+    setActiveTab,
+    setSelectedProductId,
+    setPolicyModalTopic,
+    currentUser,
+  } = useStore();
 
   const renderContent = () => {
     if (activeTab === 'catalog' && selectedProductId) {
@@ -53,7 +61,7 @@ const MainShell: React.FC = () => {
         {renderContent()}
       </main>
 
-      {/* Nike-style 4-column Footer */}
+      {/* Nike-style 4-column Footer with interactive policy modals */}
       <footer className="bg-canvas border-t border-hairline mt-12">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-8 xl:px-14 py-12 space-y-12">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -91,11 +99,13 @@ const MainShell: React.FC = () => {
                     ขอรับรองความแท้ (Verify)
                   </button>
                 </li>
-                <li>
-                  <button type="button" onClick={() => navigateFooter('admin')} className="hover:text-ink">
-                    ศูนย์จัดการข้อร้องเรียนแอดมิน
-                  </button>
-                </li>
+                {currentUser?.role === 'admin' && (
+                  <li>
+                    <button type="button" onClick={() => navigateFooter('admin')} className="hover:text-ink">
+                      ศูนย์จัดการข้อร้องเรียนแอดมิน
+                    </button>
+                  </li>
+                )}
               </ul>
             </div>
 
@@ -123,9 +133,33 @@ const MainShell: React.FC = () => {
             <div className="space-y-3">
               <h3 className="text-base font-medium text-ink">Trust &amp; Ethics</h3>
               <ul className="space-y-2.5 text-sm font-medium text-mute">
-                <li>SomJing Authenticity Guarantee</li>
-                <li>PDPA พ.ศ. 2562 Compliance</li>
-                <li>E-Transactions Act &amp; Consumer Protection</li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setPolicyModalTopic('authenticity')}
+                    className="hover:text-ink text-left"
+                  >
+                    SomJing Authenticity Guarantee
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setPolicyModalTopic('pdpa')}
+                    className="hover:text-ink text-left"
+                  >
+                    PDPA พ.ศ. 2562 Compliance
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setPolicyModalTopic('etransactions')}
+                    className="hover:text-ink text-left"
+                  >
+                    E-Transactions Act &amp; Consumer Protection
+                  </button>
+                </li>
               </ul>
             </div>
           </div>
@@ -134,9 +168,27 @@ const MainShell: React.FC = () => {
             <p>© 2026 SomJing (สมจริง) University E-Commerce Prototype. All Rights Reserved.</p>
             <div className="flex flex-wrap gap-4">
               <span>Thailand (THB)</span>
-              <span>Terms of Sale</span>
-              <span>Privacy Policy</span>
-              <span>Escrow Protection Policy</span>
+              <button
+                type="button"
+                onClick={() => setPolicyModalTopic('terms')}
+                className="hover:text-ink uppercase"
+              >
+                Terms of Sale
+              </button>
+              <button
+                type="button"
+                onClick={() => setPolicyModalTopic('pdpa')}
+                className="hover:text-ink uppercase"
+              >
+                Privacy Policy
+              </button>
+              <button
+                type="button"
+                onClick={() => setPolicyModalTopic('escrow')}
+                className="hover:text-ink uppercase"
+              >
+                Escrow Protection Policy
+              </button>
             </div>
           </div>
         </div>
@@ -144,6 +196,7 @@ const MainShell: React.FC = () => {
 
       <AuthModal />
       <PaymentModal />
+      <PolicyModal />
       <ToastContainer />
     </div>
   );

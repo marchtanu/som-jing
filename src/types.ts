@@ -7,6 +7,7 @@ export interface User {
   password?: string;
   role: UserRole;
   phone: string;
+  defaultAddress?: string;
   verifiedSeller: boolean;
   joinedAt: string;
   avatarInitials: string;
@@ -16,11 +17,25 @@ export type ProductCategory = 'art-toys' | 'sneakers' | 'gadgets' | 'watches';
 
 export type VerificationStatus = 'verified' | 'pending' | 'unverified' | 'rejected';
 
+export interface ProductOption {
+  id: string;
+  label: string;
+  colorHex: string;
+  spec: string;
+  imageIndex: number;
+}
+
+export interface ProductSpec {
+  label: string;
+  value: string;
+}
+
 export interface Bid {
   id: string;
   bidderId: string;
   bidderName: string;
   amount: number;
+  selectedOptionLabel?: string;
   createdAt: string;
 }
 
@@ -31,6 +46,8 @@ export interface Product {
   condition: 'New / Deadstock' | 'Mint (99%)' | 'Like New (95%)' | 'Vintage Good';
   description: string;
   images: string[];
+  options: ProductOption[];
+  specs: ProductSpec[];
   saleType: 'auction' | 'fixed';
   currentPrice: number;
   startPrice: number;
@@ -117,10 +134,12 @@ export interface EscrowOrder {
   sourceId: string;
   productTitle: string;
   productImage: string;
+  selectedOptionLabel?: string;
   amount: number;
   escrowFee: number;
   totalPaid: number;
   paymentMethod: PaymentMethod;
+  shippingAddress?: string;
   buyerId: string;
   buyerName: string;
   sellerId: string;
@@ -162,11 +181,19 @@ export type ActiveTab =
   | 'admin'
   | 'report';
 
+export type PolicyTopic =
+  | 'authenticity'
+  | 'escrow'
+  | 'pdpa'
+  | 'etransactions'
+  | 'terms';
+
 export interface PaymentCheckoutTarget {
   sourceType: 'auction' | 'direct' | 'wanted_offer';
   sourceId: string;
   productTitle: string;
   productImage: string;
+  selectedOptionLabel?: string;
   amount: number;
   sellerId: string;
   sellerName: string;

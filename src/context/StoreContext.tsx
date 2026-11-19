@@ -6,15 +6,18 @@ import {
   EscrowOrder,
   PaymentCheckoutTarget,
   PaymentMethod,
+  PolicyTopic,
   Product,
   ProductCategory,
+  ProductOption,
+  ProductSpec,
   User,
   UserRole,
   VerificationRequest,
   WantedListing,
 } from '../types';
 
-const STORAGE_KEY = 'somjing_prototype_v1';
+const STORAGE_KEY = 'somjing_prototype_v2';
 
 interface ToastMessage {
   id: string;
@@ -31,6 +34,8 @@ interface PersistedState {
   wantedListings: WantedListing[];
   escrowOrders: EscrowOrder[];
   complaints: Complaint[];
+  watchlistIds: string[];
+  selectedOptionByProduct: Record<string, string>;
 }
 
 interface StoreContextValue {
@@ -41,6 +46,8 @@ interface StoreContextValue {
   wantedListings: WantedListing[];
   escrowOrders: EscrowOrder[];
   complaints: Complaint[];
+  watchlistIds: string[];
+  selectedOptionByProduct: Record<string, string>;
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
   selectedProductId: string | null;
@@ -49,30 +56,44 @@ interface StoreContextValue {
   setAuthModalOpen: (open: boolean) => void;
   checkoutTarget: PaymentCheckoutTarget | null;
   setCheckoutTarget: (target: PaymentCheckoutTarget | null) => void;
+  policyModalTopic: PolicyTopic | null;
+  setPolicyModalTopic: (topic: PolicyTopic | null) => void;
   toasts: ToastMessage[];
   dismissToast: (id: string) => void;
   pushToast: (type: ToastMessage['type'], title: string, detail?: string) => void;
 
-  // Auth & Role
+  // Auth
   loginUser: (email: string, password: string) => { ok: boolean; error?: string };
   registerUser: (input: {
     name: string;
     email: string;
     password: string;
     phone: string;
+    defaultAddress?: string;
     role: UserRole;
   }) => { ok: boolean; error?: string };
   logoutUser: () => void;
-  switchDemoRole: (role: UserRole) => void;
+
+  // Watchlist & Options
+  toggleWatchlist: (productId: string) => void;
+  setProductSelectedOption: (productId: string, optionId: string) => void;
+  getSelectedOptionForProduct: (product: Product) => ProductOption;
 
   // Auctions & Listings
-  placeBid: (productId: string, amount: number) => { ok: boolean; error?: string };
+  placeBid: (
+    productId: string,
+    amount: number,
+    selectedOptionLabel?: string
+  ) => { ok: boolean; error?: string };
   createProduct: (input: {
     title: string;
     category: ProductCategory;
     condition: Product['condition'];
     description: string;
     imageUrl: string;
+    secondaryImageUrl?: string;
+    options?: ProductOption[];
+    specs?: ProductSpec[];
     saleType: 'auction' | 'fixed';
     startPrice: number;
     buyNowPrice?: number;
@@ -81,7 +102,7 @@ interface StoreContextValue {
     serialNumber: string;
     requestVerify: boolean;
     purchaseProofNote?: string;
-  }) => Product;
+  }) => Product | null;
 
   // Verification
   submitVerificationRequest: (input: {
@@ -92,12 +113,12 @@ interface StoreContextValue {
     serialNumber: string;
     purchaseProofNote: string;
     evidenceImageUrl?: string;
-  }) => void;
+  }) => { ok: boolean; error?: string };
   reviewVerificationRequest: (
     requestId: string,
     decision: 'approved' | 'rejected',
     reviewerNote: string
-  ) => void;
+  ) => { ok: boolean; error?: string };
 
   // Wanted Listings & Offers
   createWantedListing: (input: {
@@ -107,7 +128,7 @@ interface StoreContextValue {
     desiredCondition: string;
     description: string;
     referenceImage: string;
-  }) => void;
+  }) => { ok: boolean; error?: string };
   submitWantedOffer: (input: {
     wantedId: string;
     price: number;
@@ -116,25 +137,33 @@ interface StoreContextValue {
     certificateId?: string;
     message: string;
     image: string;
-  }) => void;
+  }) => { ok: boolean; error?: string };
 
   // Simulated Payment & Escrow
-  completeSimulatedPayment: (target: PaymentCheckoutTarget, method: PaymentMethod) => EscrowOrder;
-  markOrderShipped: (orderId: string, courier: string, trackingNumber: string) => void;
-  confirmOrderReceived: (orderId: string) => void;
-  releaseEscrowFunds: (orderId: string) => void;
+  completeSimulatedPayment: (
+    target: PaymentCheckoutTarget,
+    method: PaymentMethod,
+    shippingAddress?: string
+  ) => EscrowOrder;
+  markOrderShipped: (
+    orderId: string,
+    courier: string,
+    trackingNumber: string
+  ) => { ok: boolean; error?: string };
+  confirmOrderReceived: (orderId: string) => { ok: boolean; error?: string };
+  releaseEscrowFunds: (orderId: string) => { ok: boolean; error?: string };
 
   // Complaints & Admin
   fileComplaint: (input: {
     orderId: string;
     reason: string;
     description: string;
-  }) => void;
+  }) => { ok: boolean; error?: string };
   resolveComplaint: (
     complaintId: string,
     decision: 'resolved_refund' | 'resolved_release',
     adminNote: string
-  ) => void;
+  ) => { ok: boolean; error?: string };
 
   // Demo Reset
   resetDemoData: () => void;
@@ -148,7 +177,11 @@ function loadInitialState(): PersistedState {
     if (raw) {
       const parsed = JSON.parse(raw) as PersistedState;
       if (parsed && Array.isArray(parsed.products) && Array.isArray(parsed.users)) {
-        return parsed;
+        return {
+          ...parsed,
+          watchlistIds: Array.isArray(parsed.watchlistIds) ? parsed.watchlistIds : ['prod-1'],
+          selectedOptionByProduct: parsed.selectedOptionByProduct ?? {},
+        };
       }
     }
   } catch {
@@ -158,15 +191,18 @@ function loadInitialState(): PersistedState {
   return {
     ...seed,
     currentUserId: seed.users[0].id,
+    watchlistIds: ['prod-1', 'prod-2'],
+    selectedOptionByProduct: {},
   };
 }
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<PersistedState>(() => loadInitialState());
-  const [activeTab, setActiveTab] = useState<ActiveTab>('catalog');
+  const [activeTab, setActiveTabState] = useState<ActiveTab>('catalog');
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [checkoutTarget, setCheckoutTarget] = useState<PaymentCheckoutTarget | null>(null);
+  const [policyModalTopic, setPolicyModalTopic] = useState<PolicyTopic | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   useEffect(() => {
@@ -178,6 +214,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [state]);
 
   const currentUser = state.users.find((u) => u.id === state.currentUserId) ?? null;
+
+  const setActiveTab = (tab: ActiveTab) => {
+    if (tab === 'admin' && currentUser?.role !== 'admin') {
+      pushToast(
+        'error',
+        'ไม่มีสิทธิ์เข้าถึงหน้าผู้ดูแลระบบ',
+        'กรุณาเข้าสู่ระบบด้วยบัญชีผู้ดูแลระบบ (Admin) เพื่อจัดการ Verify และข้อร้องเรียน'
+      );
+      setAuthModalOpen(true);
+      return;
+    }
+    setActiveTabState(tab);
+  };
 
   const dismissToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -196,10 +245,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       (u) => u.email.toLowerCase() === email.trim().toLowerCase() && u.password === password
     );
     if (!found) {
-      return { ok: false, error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง (ลองใช้บัญชีทดสอบที่มีให้ได้)' };
+      return { ok: false, error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' };
     }
     setState((prev) => ({ ...prev, currentUserId: found.id }));
     setAuthModalOpen(false);
+    if (activeTab === 'admin' && found.role !== 'admin') {
+      setActiveTabState('catalog');
+    }
     pushToast('success', `เข้าสู่ระบบสำเร็จ: ${found.name}`);
     return { ok: true };
   };
@@ -209,8 +261,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     email: string;
     password: string;
     phone: string;
+    defaultAddress?: string;
     role: UserRole;
   }) => {
+    if (input.role === 'admin') {
+      return { ok: false, error: 'ไม่สามารถสมัครบัญชีผู้ดูแลระบบจากหน้าสาธารณะได้' };
+    }
     const exists = state.users.some(
       (u) => u.email.toLowerCase() === input.email.trim().toLowerCase()
     );
@@ -224,6 +280,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       email: input.email.trim().toLowerCase(),
       password: input.password,
       phone: input.phone.trim() || '080-000-0000',
+      defaultAddress:
+        input.defaultAddress?.trim() || 'กรุงเทพมหานคร (สามารถแก้ไขที่อยู่จัดส่งได้ในขั้นตอนชำระเงิน)',
       role: input.role,
       verifiedSeller: false,
       joinedAt: new Date().toISOString(),
@@ -235,31 +293,80 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       currentUserId: newUser.id,
     }));
     setAuthModalOpen(false);
+    if (activeTab === 'admin') {
+      setActiveTabState('catalog');
+    }
     pushToast('success', 'สมัครสมาชิกและเข้าสู่ระบบสำเร็จ', `ยินดีต้อนรับคุณ ${newUser.name}`);
     return { ok: true };
   };
 
   const logoutUser = () => {
     setState((prev) => ({ ...prev, currentUserId: null }));
-    pushToast('info', 'ออกจากระบบแล้ว', 'กรุณาเข้าสู่ระบบเพื่อทำการประมูลหรือลงขาย');
+    if (activeTab === 'admin') {
+      setActiveTabState('catalog');
+    }
+    pushToast('info', 'ออกจากระบบแล้ว', 'กรุณาเข้าสู่ระบบเพื่อใช้งานต่อ');
   };
 
-  const switchDemoRole = (role: UserRole) => {
-    const target = state.users.find((u) => u.role === role);
-    if (!target) return;
-    setState((prev) => ({ ...prev, currentUserId: target.id }));
-    const roleLabel =
-      role === 'buyer' ? 'ผู้ซื้อ (Buyer)' : role === 'seller' ? 'ผู้ขาย (Seller)' : 'แอดมิน (Admin)';
-    pushToast('info', `สลับบทบาทเป็น ${roleLabel}`, `กำลังใช้งานในชื่อ ${target.name}`);
+  const toggleWatchlist = (productId: string) => {
+    const exists = state.watchlistIds.includes(productId);
+    setState((prev) => ({
+      ...prev,
+      watchlistIds: exists
+        ? prev.watchlistIds.filter((id) => id !== productId)
+        : [...prev.watchlistIds, productId],
+    }));
+    const product = state.products.find((p) => p.id === productId);
+    pushToast(
+      'info',
+      exists ? 'นำออกจากรายการที่บันทึกแล้ว' : 'บันทึกในรายการโปรดแล้ว',
+      product?.title
+    );
   };
 
-  const placeBid = (productId: string, amount: number) => {
+  const setProductSelectedOption = (productId: string, optionId: string) => {
+    setState((prev) => ({
+      ...prev,
+      selectedOptionByProduct: {
+        ...prev.selectedOptionByProduct,
+        [productId]: optionId,
+      },
+    }));
+  };
+
+  const getSelectedOptionForProduct = (product: Product): ProductOption => {
+    const selectedId = state.selectedOptionByProduct[product.id];
+    return (
+      product.options.find((opt) => opt.id === selectedId) ??
+      product.options[0] ?? {
+        id: 'default',
+        label: product.condition,
+        colorHex: '#111111',
+        spec: product.condition,
+        imageIndex: 0,
+      }
+    );
+  };
+
+  const placeBid = (productId: string, amount: number, selectedOptionLabel?: string) => {
     if (!currentUser) {
       setAuthModalOpen(true);
       return { ok: false, error: 'กรุณาเข้าสู่ระบบก่อนทำการบิดประมูล' };
     }
+    if (currentUser.role === 'admin') {
+      return {
+        ok: false,
+        error: 'บัญชีผู้ดูแลระบบ (Admin) ไม่สามารถเข้าร่วมบิดประมูลได้เพื่อความเป็นกลาง',
+      };
+    }
     const product = state.products.find((p) => p.id === productId);
     if (!product) return { ok: false, error: 'ไม่พบสินค้านี้' };
+    if (product.sellerId === currentUser.id) {
+      return { ok: false, error: 'ผู้ขายไม่สามารถบิดประมูลสินค้าที่ตนเองลงขายได้' };
+    }
+    if (product.status === 'sold') {
+      return { ok: false, error: 'สินค้านี้ถูกปิดการขายเรียบร้อยแล้ว' };
+    }
     if (new Date(product.endTime).getTime() <= Date.now()) {
       return { ok: false, error: 'รายการประมูลนี้ปิดเวลาไปแล้ว' };
     }
@@ -271,11 +378,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       };
     }
 
+    const activeOpt = getSelectedOptionForProduct(product);
     const newBid = {
       id: `bid-${Date.now()}`,
       bidderId: currentUser.id,
       bidderName: currentUser.name,
       amount,
+      selectedOptionLabel: selectedOptionLabel || activeOpt.label,
       createdAt: new Date().toISOString(),
     };
 
@@ -295,25 +404,63 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     pushToast(
       'success',
       `เสนอราคาประมูลสำเร็จ ฿${amount.toLocaleString('th-TH')}`,
-      `คุณเป็นผู้เสนอราคาสูงสุดสำหรับ ${product.title}`
+      `ตัวเลือก: ${newBid.selectedOptionLabel}`
     );
     return { ok: true };
   };
 
   const createProduct: StoreContextValue['createProduct'] = (input) => {
-    const actor = currentUser ?? state.users[1];
+    if (!currentUser) {
+      setAuthModalOpen(true);
+      pushToast('error', 'กรุณาเข้าสู่ระบบก่อนลงขายสินค้า');
+      return null;
+    }
+    if (currentUser.role === 'admin') {
+      pushToast('error', 'บัญชี Admin ไม่สามารถลงขายสินค้าได้');
+      return null;
+    }
+
     const nowIso = new Date().toISOString();
     const productId = `prod-${Date.now()}`;
+    const images = [
+      input.imageUrl ||
+        'https://images.unsplash.com/photo-1608889476561-6242cfdbf622?auto=format&fit=crop&w=900&q=80',
+      input.secondaryImageUrl ||
+        input.imageUrl ||
+        'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?auto=format&fit=crop&w=900&q=80',
+    ];
+
+    const options: ProductOption[] =
+      input.options && input.options.length > 0
+        ? input.options
+        : [
+            {
+              id: `${productId}-opt-1`,
+              label: `${input.condition} (Standard Set)`,
+              colorHex: '#111111',
+              spec: input.description || 'อุปกรณ์ครบตามมาตรฐาน',
+              imageIndex: 0,
+            },
+          ];
+
+    const specs: ProductSpec[] =
+      input.specs && input.specs.length > 0
+        ? input.specs
+        : [
+            { label: 'สภาพสินค้า', value: input.condition },
+            { label: 'Serial / รหัสอ้างอิง', value: input.serialNumber || '-' },
+            { label: 'การคุ้มครอง', value: 'SomJing Escrow 4 ขั้นตอน' },
+          ];
+
     const newProduct: Product = {
       id: productId,
       title: input.title,
       category: input.category,
       condition: input.condition,
       description: input.description,
-      images: [
-        input.imageUrl ||
-          'https://images.unsplash.com/photo-1608889476561-6242cfdbf622?auto=format&fit=crop&w=900&q=80',
-      ],
+      images,
+      options,
+      specs,
       saleType: input.saleType,
       currentPrice: input.startPrice,
       startPrice: input.startPrice,
@@ -321,8 +468,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       minBidIncrement: input.minBidIncrement,
       endTime: new Date(Date.now() + input.durationHours * 3600 * 1000).toISOString(),
       bids: [],
-      sellerId: actor.id,
-      sellerName: actor.name,
+      sellerId: currentUser.id,
+      sellerName: currentUser.name,
       verificationStatus: input.requestVerify ? 'pending' : 'unverified',
       serialNumber: input.serialNumber || `SN-${Date.now().toString().slice(-6)}`,
       status: 'active',
@@ -337,8 +484,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         productTitle: newProduct.title,
         productImage: newProduct.images[0],
         category: newProduct.category,
-        sellerId: actor.id,
-        sellerName: actor.name,
+        sellerId: currentUser.id,
+        sellerName: currentUser.name,
         serialNumber: newProduct.serialNumber || '-',
         purchaseProofNote:
           input.purchaseProofNote || 'ส่งคำขอตรวจความแท้พร้อมใบเสร็จและภาพถ่ายซีเรียลนัมเบอร์',
@@ -360,14 +507,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       'success',
       'ลงขายสินค้าสำเร็จ!',
       input.requestVerify
-        ? 'ประกาศสินค้าและส่งคำขอ Verify เข้าคิวผู้ดูแลระบบแล้ว'
+        ? 'ประกาศสินค้าและส่งคำขอ Verify เข้าคิวผู้ตรวจสอบแล้ว'
         : 'สินค้าของคุณแสดงบนหน้าตลาดกลางเรียบร้อย'
     );
     return newProduct;
   };
 
   const submitVerificationRequest: StoreContextValue['submitVerificationRequest'] = (input) => {
-    const actor = currentUser ?? state.users[1];
+    if (!currentUser) {
+      setAuthModalOpen(true);
+      return { ok: false, error: 'กรุณาเข้าสู่ระบบก่อนส่งคำขอ Verify' };
+    }
     const nowIso = new Date().toISOString();
     const matchedProduct = input.productId
       ? state.products.find((p) => p.id === input.productId)
@@ -382,8 +532,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         input.productImage ||
         'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=900&q=80',
       category: matchedProduct ? matchedProduct.category : input.category,
-      sellerId: actor.id,
-      sellerName: actor.name,
+      sellerId: currentUser.id,
+      sellerName: currentUser.name,
       serialNumber: input.serialNumber,
       purchaseProofNote: input.purchaseProofNote,
       evidenceImages: [
@@ -409,8 +559,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     pushToast(
       'success',
       'ส่งคำขอ SomJing Verify แล้ว',
-      'สามารถสลับไปหน้าแอดมินเพื่อทดสอบกดอนุมัติ Verified Badge ได้ทันที'
+      'คำขอถูกส่งเข้าสู่คิวการตรวจสอบของทีมผู้เชี่ยวชาญเรียบร้อย'
     );
+    return { ok: true };
   };
 
   const reviewVerificationRequest = (
@@ -418,14 +569,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     decision: 'approved' | 'rejected',
     reviewerNote: string
   ) => {
+    if (currentUser?.role !== 'admin') {
+      pushToast('error', 'เฉพาะบัญชีแอดมินเท่านั้นที่อนุมัติ Verify ได้');
+      return { ok: false, error: 'ต้องใช้งานในสิทธิ์ผู้ดูแลระบบ (Admin)' };
+    }
     const req = state.verificationRequests.find((r) => r.id === requestId);
-    if (!req) return;
+    if (!req) return { ok: false, error: 'ไม่พบคำขอ Verify นี้' };
     const nowIso = new Date().toISOString();
     const certId =
       decision === 'approved'
         ? `SJ-CERT-2026-${Math.floor(1000 + Math.random() * 8999)}`
         : undefined;
-    const reviewerName = currentUser?.name || 'SomJing Specialist';
+    const reviewerName = currentUser.name;
 
     setState((prev) => ({
       ...prev,
@@ -470,10 +625,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         : 'ปฏิเสธคำขอรับรองความแท้แล้ว',
       req.productTitle
     );
+    return { ok: true };
   };
 
   const createWantedListing: StoreContextValue['createWantedListing'] = (input) => {
-    const actor = currentUser ?? state.users[0];
+    if (!currentUser) {
+      setAuthModalOpen(true);
+      return { ok: false, error: 'กรุณาเข้าสู่ระบบก่อนสร้าง Wanted Listing' };
+    }
+    if (currentUser.role === 'admin') {
+      pushToast('error', 'บัญชี Admin ไม่สามารถโพสต์ Wanted Listing ได้');
+      return { ok: false, error: 'บัญชี Admin ไม่สามารถโพสต์ Wanted Listing ได้' };
+    }
     const newListing: WantedListing = {
       id: `want-${Date.now()}`,
       title: input.title,
@@ -484,8 +647,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       referenceImage:
         input.referenceImage ||
         'https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=900&q=80',
-      buyerId: actor.id,
-      buyerName: actor.name,
+      buyerId: currentUser.id,
+      buyerName: currentUser.name,
       createdAt: new Date().toISOString(),
       status: 'open',
       offers: [],
@@ -495,15 +658,29 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       wantedListings: [newListing, ...prev.wantedListings],
     }));
     pushToast('success', 'สร้างประกาศตามหาสินค้า (Wanted) สำเร็จ', input.title);
+    return { ok: true };
   };
 
   const submitWantedOffer: StoreContextValue['submitWantedOffer'] = (input) => {
-    const actor = currentUser ?? state.users[1];
+    if (!currentUser) {
+      setAuthModalOpen(true);
+      return { ok: false, error: 'กรุณาเข้าสู่ระบบก่อนส่งข้อเสนอ' };
+    }
+    if (currentUser.role === 'admin') {
+      pushToast('error', 'บัญชี Admin ไม่สามารถส่งข้อเสนอขายได้');
+      return { ok: false, error: 'บัญชี Admin ไม่สามารถส่งข้อเสนอขายได้' };
+    }
+    const listing = state.wantedListings.find((w) => w.id === input.wantedId);
+    if (listing && listing.buyerId === currentUser.id) {
+      pushToast('error', 'ไม่สามารถส่งข้อเสนอในประกาศของตนเองได้');
+      return { ok: false, error: 'ไม่สามารถส่งข้อเสนอในประกาศของตนเองได้' };
+    }
+
     const newOffer = {
       id: `offer-${Date.now()}`,
       wantedId: input.wantedId,
-      sellerId: actor.id,
-      sellerName: actor.name,
+      sellerId: currentUser.id,
+      sellerName: currentUser.name,
       price: input.price,
       condition: input.condition,
       isVerifiedItem: input.isVerifiedItem,
@@ -524,18 +701,28 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         w.id === input.wantedId ? { ...w, offers: [newOffer, ...w.offers] } : w
       ),
     }));
-    pushToast('success', 'ส่งข้อเสนอขายให้ผู้ตามหาแล้ว', `ราคาที่เสนอ ฿${input.price.toLocaleString('th-TH')}`);
+    pushToast(
+      'success',
+      'ส่งข้อเสนอขายให้ผู้ตามหาแล้ว',
+      `ราคาที่เสนอ ฿${input.price.toLocaleString('th-TH')}`
+    );
+    return { ok: true };
   };
 
   const completeSimulatedPayment = (
     target: PaymentCheckoutTarget,
-    method: PaymentMethod
+    method: PaymentMethod,
+    shippingAddress?: string
   ): EscrowOrder => {
     const buyer = currentUser ?? state.users[0];
     const nowIso = new Date().toISOString();
     const escrowFee = Math.round(target.amount * 0.02);
     const totalPaid = target.amount + escrowFee;
     const orderNumber = `SJ-ESC-${String(Date.now()).slice(-6)}`;
+    const address =
+      shippingAddress?.trim() ||
+      buyer.defaultAddress ||
+      '99/14 ถนนพุทธมณฑลสาย 4 จ.นครปฐม 73170';
 
     const newOrder: EscrowOrder = {
       id: `ord-${Date.now()}`,
@@ -544,10 +731,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       sourceId: target.sourceId,
       productTitle: target.productTitle,
       productImage: target.productImage,
+      selectedOptionLabel: target.selectedOptionLabel,
       amount: target.amount,
       escrowFee,
       totalPaid,
       paymentMethod: method,
+      shippingAddress: address,
       buyerId: buyer.id,
       buyerName: buyer.name,
       sellerId: target.sellerId,
@@ -560,7 +749,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         {
           step: 'held',
           label: 'ชำระเงินจำลอง & พักเงินในระบบ Escrow',
-          detail: `ชำระผ่าน ${method} ยอดรวม ฿${totalPaid.toLocaleString('th-TH')} (รวมค่าคุ้มครอง 2%) เงินถูกพักไว้ที่ SomJing อย่างปลอดภัย`,
+          detail: `ชำระผ่าน ${method} ยอดรวม ฿${totalPaid.toLocaleString('th-TH')} (รวมค่าคุ้มครอง 2%) · จัดส่งที่: ${address}`,
           timestamp: nowIso,
           actor: buyer.name,
         },
@@ -594,7 +783,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     setCheckoutTarget(null);
     setSelectedProductId(null);
-    setActiveTab('escrow');
+    setActiveTabState('escrow');
     pushToast(
       'success',
       `ชำระเงินจำลองสำเร็จ (${orderNumber})`,
@@ -604,7 +793,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const markOrderShipped = (orderId: string, courier: string, trackingNumber: string) => {
-    const actorName = currentUser?.name || 'ผู้ขาย';
+    const order = state.escrowOrders.find((o) => o.id === orderId);
+    if (!order) return { ok: false, error: 'ไม่พบคำสั่งซื้อ' };
+    if (!currentUser || (currentUser.id !== order.sellerId && currentUser.role !== 'admin')) {
+      const msg = `เฉพาะผู้ขาย (${order.sellerName}) เท่านั้นที่สามารถแจ้งจัดส่งสินค้าได้`;
+      pushToast('error', 'ไม่มีสิทธิ์ดำเนินการ', msg);
+      return { ok: false, error: msg };
+    }
     const nowIso = new Date().toISOString();
     setState((prev) => ({
       ...prev,
@@ -622,7 +817,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                   label: 'ผู้ขายจัดส่งสินค้าแล้ว',
                   detail: `จัดส่งผ่าน ${courier} เลขพัสดุ ${trackingNumber}`,
                   timestamp: nowIso,
-                  actor: actorName,
+                  actor: currentUser.name,
                 },
               ],
             }
@@ -630,10 +825,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ),
     }));
     pushToast('success', 'อัปเดตสถานะจัดส่งสินค้าแล้ว', `เลขพัสดุ: ${trackingNumber}`);
+    return { ok: true };
   };
 
   const confirmOrderReceived = (orderId: string) => {
-    const actorName = currentUser?.name || 'ผู้ซื้อ';
+    const order = state.escrowOrders.find((o) => o.id === orderId);
+    if (!order) return { ok: false, error: 'ไม่พบคำสั่งซื้อ' };
+    if (!currentUser || (currentUser.id !== order.buyerId && currentUser.role !== 'admin')) {
+      const msg = `เฉพาะผู้ซื้อ (${order.buyerName}) เท่านั้นที่สามารถกดยืนยันรับสินค้าได้`;
+      pushToast('error', 'ไม่มีสิทธิ์ดำเนินการ', msg);
+      return { ok: false, error: msg };
+    }
     const nowIso = new Date().toISOString();
     setState((prev) => ({
       ...prev,
@@ -649,19 +851,26 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                   label: 'ผู้ซื้อยืนยันได้รับสินค้าถูกต้อง',
                   detail: 'ผู้ซื้อตรวจสอบความแท้และสภาพสินค้าเรียบร้อย พร้อมเข้าสู่ขั้นตอนปล่อยเงิน',
                   timestamp: nowIso,
-                  actor: actorName,
+                  actor: currentUser.name,
                 },
               ],
             }
           : ord
       ),
     }));
-    pushToast('success', 'ยืนยันรับสินค้าเรียบร้อย', 'ขั้นตอนสุดท้าย: กดปล่อยเงินจาก Escrow ให้ผู้ขาย');
+    pushToast('success', 'ยืนยันรับสินค้าเรียบร้อย', 'ขั้นตอนสุดท้าย: ปล่อยเงินจาก Escrow ให้ผู้ขาย');
+    return { ok: true };
   };
 
   const releaseEscrowFunds = (orderId: string) => {
-    const nowIso = new Date().toISOString();
     const order = state.escrowOrders.find((o) => o.id === orderId);
+    if (!order) return { ok: false, error: 'ไม่พบคำสั่งซื้อ' };
+    if (!currentUser || (currentUser.id !== order.buyerId && currentUser.role !== 'admin')) {
+      const msg = 'เฉพาะผู้ซื้อหรือผู้ดูแลระบบเท่านั้นที่สามารถอนุมัติปล่อยเงินได้';
+      pushToast('error', 'ไม่มีสิทธิ์ดำเนินการ', msg);
+      return { ok: false, error: msg };
+    }
+    const nowIso = new Date().toISOString();
     setState((prev) => ({
       ...prev,
       escrowOrders: prev.escrowOrders.map((ord) =>
@@ -676,7 +885,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                   label: 'ปล่อยเงินให้ผู้ขายแล้ว (Escrow Released)',
                   detail: `โอนยอดสุทธิ ฿${ord.amount.toLocaleString('th-TH')} เข้าบัญชีผู้ขาย ${ord.sellerName} เสร็จสมบูรณ์`,
                   timestamp: nowIso,
-                  actor: 'ระบบ SomJing Escrow',
+                  actor: currentUser.role === 'admin' ? currentUser.name : 'ระบบ SomJing Escrow',
                 },
               ],
             }
@@ -686,14 +895,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     pushToast(
       'success',
       'ปล่อยเงินให้ผู้ขายสำเร็จ!',
-      order ? `โอน ฿${order.amount.toLocaleString('th-TH')} ให้ ${order.sellerName} เรียบร้อย` : undefined
+      `โอน ฿${order.amount.toLocaleString('th-TH')} ให้ ${order.sellerName} เรียบร้อย`
     );
+    return { ok: true };
   };
 
   const fileComplaint: StoreContextValue['fileComplaint'] = (input) => {
     const order = state.escrowOrders.find((o) => o.id === input.orderId);
-    if (!order) return;
-    const actor = currentUser ?? state.users[0];
+    if (!order) return { ok: false, error: 'ไม่พบคำสั่งซื้อ' };
+    if (!currentUser) {
+      setAuthModalOpen(true);
+      return { ok: false, error: 'กรุณาเข้าสู่ระบบก่อนยื่นข้อร้องเรียน' };
+    }
     const nowIso = new Date().toISOString();
     const caseNumber = `CMP-2026-${String(Date.now()).slice(-3)}`;
 
@@ -703,10 +916,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       orderId: order.id,
       orderNumber: order.orderNumber,
       productTitle: order.productTitle,
-      reporterId: actor.id,
-      reporterName: actor.name,
-      reporterRole: actor.role,
-      accusedName: actor.id === order.buyerId ? order.sellerName : order.buyerName,
+      reporterId: currentUser.id,
+      reporterName: currentUser.name,
+      reporterRole: currentUser.role,
+      accusedName: currentUser.id === order.buyerId ? order.sellerName : order.buyerName,
       reason: input.reason,
       description: input.description,
       amountInEscrow: order.totalPaid,
@@ -729,7 +942,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                   label: `ระงับเงินชั่วคราว — มีข้อร้องเรียน (${caseNumber})`,
                   detail: `${input.reason}: ${input.description}`,
                   timestamp: nowIso,
-                  actor: actor.name,
+                  actor: currentUser.name,
                 },
               ],
             }
@@ -742,6 +955,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       `ยื่นข้อร้องเรียนสำเร็จ (${caseNumber})`,
       'เงินในระบบ Escrow ถูกระงับไว้ชั่วคราวเพื่อให้แอดมินตรวจสอบ'
     );
+    return { ok: true };
   };
 
   const resolveComplaint = (
@@ -749,10 +963,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     decision: 'resolved_refund' | 'resolved_release',
     adminNote: string
   ) => {
+    if (currentUser?.role !== 'admin') {
+      pushToast('error', 'เฉพาะบัญชีแอดมินเท่านั้นที่ตัดสินข้อร้องเรียนได้');
+      return { ok: false, error: 'ต้องใช้งานในสิทธิ์ผู้ดูแลระบบ (Admin)' };
+    }
     const cmp = state.complaints.find((c) => c.id === complaintId);
-    if (!cmp) return;
+    if (!cmp) return { ok: false, error: 'ไม่พบข้อร้องเรียนนี้' };
     const nowIso = new Date().toISOString();
-    const adminName = currentUser?.name || 'แอดมิน SomJing';
+    const adminName = currentUser.name;
 
     setState((prev) => ({
       ...prev,
@@ -799,6 +1017,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ? `ปิดเคส ${cmp.caseNumber}: คืนเงินผู้ซื้อแล้ว`
         : `ปิดเคส ${cmp.caseNumber}: ปล่อยเงินผู้ขายแล้ว`
     );
+    return { ok: true };
   };
 
   const resetDemoData = () => {
@@ -806,11 +1025,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const nextState: PersistedState = {
       ...seed,
       currentUserId: seed.users[0].id,
+      watchlistIds: ['prod-1', 'prod-2'],
+      selectedOptionByProduct: {},
     };
     setState(nextState);
     setSelectedProductId(null);
     setCheckoutTarget(null);
-    pushToast('info', 'รีเซ็ตข้อมูลตัวอย่างทั้งหมดแล้ว', 'ข้อมูลประมูล Verify, Wanted, Escrow และข้อร้องเรียนกลับมาเป็นค่าเริ่มต้น');
+    setActiveTabState('catalog');
+    pushToast(
+      'info',
+      'รีเซ็ตข้อมูลระบบทั้งหมดแล้ว',
+      'ข้อมูลสินค้า ประมูล Verify, Wanted และ Escrow กลับมาเป็นค่าเริ่มต้น (บัญชีผู้ซื้อ)'
+    );
   };
 
   return (
@@ -823,6 +1049,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         wantedListings: state.wantedListings,
         escrowOrders: state.escrowOrders,
         complaints: state.complaints,
+        watchlistIds: state.watchlistIds,
+        selectedOptionByProduct: state.selectedOptionByProduct,
         activeTab,
         setActiveTab,
         selectedProductId,
@@ -831,13 +1059,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setAuthModalOpen,
         checkoutTarget,
         setCheckoutTarget,
+        policyModalTopic,
+        setPolicyModalTopic,
         toasts,
         dismissToast,
         pushToast,
         loginUser,
         registerUser,
         logoutUser,
-        switchDemoRole,
+        toggleWatchlist,
+        setProductSelectedOption,
+        getSelectedOptionForProduct,
         placeBid,
         createProduct,
         submitVerificationRequest,

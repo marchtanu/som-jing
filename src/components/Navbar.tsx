@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import {
+  Heart,
   LogOut,
   Menu,
-  RotateCcw,
   Shield,
   ShoppingBag,
   User as UserIcon,
   X,
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
-import { ActiveTab, UserRole } from '../types';
+import { ActiveTab } from '../types';
 
 export const Navbar: React.FC = () => {
   const {
@@ -18,23 +18,29 @@ export const Navbar: React.FC = () => {
     setActiveTab,
     setAuthModalOpen,
     logoutUser,
-    switchDemoRole,
-    resetDemoData,
     verificationRequests,
     complaints,
     escrowOrders,
     wantedListings,
+    watchlistIds,
     setSelectedProductId,
   } = useStore();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const isAdmin = currentUser?.role === 'admin';
   const pendingVerifyCount = verificationRequests.filter((r) => r.status === 'pending').length;
   const pendingComplaintCount = complaints.filter((c) => c.status === 'pending').length;
   const adminBadgeCount = pendingVerifyCount + pendingComplaintCount;
-  const activeEscrowCount = escrowOrders.filter(
-    (o) => o.status !== 'released' && o.status !== 'refunded'
-  ).length;
+
+  const myActiveEscrowCount = currentUser
+    ? escrowOrders.filter(
+        (o) =>
+          o.status !== 'released' &&
+          o.status !== 'refunded' &&
+          (isAdmin || o.buyerId === currentUser.id || o.sellerId === currentUser.id)
+      ).length
+    : 0;
   const openWantedCount = wantedListings.filter((w) => w.status === 'open').length;
 
   const navItems: {
@@ -43,11 +49,17 @@ export const Navbar: React.FC = () => {
     badge?: number;
   }[] = [
     { id: 'catalog', label: 'Explore & Auctions' },
-    { id: 'sell', label: 'ลงขายสินค้า' },
-    { id: 'verify', label: 'ขอ Verify' },
-    { id: 'wanted', label: 'Wanted', badge: openWantedCount },
-    { id: 'escrow', label: 'Escrow', badge: activeEscrowCount },
-    { id: 'admin', label: 'Admin', badge: adminBadgeCount },
+    ...(!isAdmin
+      ? [
+          { id: 'sell' as ActiveTab, label: 'ลงขายสินค้า' },
+          { id: 'verify' as ActiveTab, label: 'ขอ Verify' },
+          { id: 'wanted' as ActiveTab, label: 'Wanted', badge: openWantedCount },
+        ]
+      : []),
+    { id: 'escrow', label: 'Escrow', badge: myActiveEscrowCount },
+    ...(isAdmin
+      ? [{ id: 'admin' as ActiveTab, label: 'Admin Console', badge: adminBadgeCount }]
+      : []),
     { id: 'report', label: 'บทที่ 5' },
   ];
 
@@ -57,65 +69,41 @@ export const Navbar: React.FC = () => {
     setMobileMenuOpen(false);
   };
 
-  const roles: { role: UserRole; label: string }[] = [
-    { role: 'buyer', label: 'ผู้ซื้อ' },
-    { role: 'seller', label: 'ผู้ขาย' },
-    { role: 'admin', label: 'แอดมิน' },
-  ];
+  const roleBadgeLabel =
+    currentUser?.role === 'admin'
+      ? 'Admin'
+      : currentUser?.role === 'seller'
+        ? 'Seller'
+        : 'Customer';
 
   return (
     <header className="sticky top-0 z-40 bg-canvas">
-      {/* Utility Bar: #f5f5f5 soft-cloud, 36px height, right-aligned cluster */}
+      {/* Real Commerce Utility Bar (#f5f5f5 soft-cloud, 36px height) */}
       <div className="bg-soft-cloud text-ink text-xs font-medium h-9">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-8 xl:px-14 h-full flex items-center justify-between gap-4">
-          <div className="hidden md:flex items-center gap-2 text-mute">
-            <span>Demo Role:</span>
-            <div className="inline-flex items-center gap-2">
-              {roles.map((r, idx) => {
-                const isActive = currentUser?.role === r.role;
-                return (
-                  <React.Fragment key={r.role}>
-                    {idx > 0 && <span className="text-hairline">|</span>}
-                    <button
-                      type="button"
-                      onClick={() => switchDemoRole(r.role)}
-                      className={`transition-colors ${
-                        isActive
-                          ? 'text-ink font-semibold underline underline-offset-4'
-                          : 'text-mute hover:text-ink'
-                      }`}
-                    >
-                      {r.label}
-                    </button>
-                  </React.Fragment>
-                );
-              })}
-            </div>
-          </div>
+          <p className="hidden md:block text-mute truncate">
+            SomJing Authenticity Guarantee · 100% Escrow Protected Transactions
+          </p>
 
           <div className="flex items-center gap-3 ml-auto text-xs font-medium text-ink">
-            <button
-              type="button"
-              onClick={resetDemoData}
-              className="inline-flex items-center gap-1 hover:text-mute transition-colors"
-            >
-              <RotateCcw className="w-3 h-3" />
-              <span>รีเซ็ตข้อมูล</span>
-            </button>
-            <span className="text-hairline">|</span>
             <button
               type="button"
               onClick={() => handleSelectTab('report')}
               className="hover:text-mute transition-colors"
             >
-              Report Ch.5
+              คู่มือ &amp; รายงานบทที่ 5
             </button>
             <span className="text-hairline">|</span>
             {currentUser ? (
-              <div className="inline-flex items-center gap-2">
-                <span className="truncate max-w-[140px]">
-                  Hi, {currentUser.name}
-                </span>
+              <div className="inline-flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setAuthModalOpen(true)}
+                  className="hover:underline underline-offset-4 truncate max-w-[180px]"
+                >
+                  {currentUser.name} ({roleBadgeLabel})
+                </button>
+                <span className="text-hairline">|</span>
                 <button
                   type="button"
                   onClick={logoutUser}
@@ -123,7 +111,7 @@ export const Navbar: React.FC = () => {
                   aria-label="Sign Out"
                 >
                   <LogOut className="w-3 h-3" />
-                  <span className="hidden sm:inline">Sign Out</span>
+                  <span className="hidden sm:inline">ออกจากระบบ</span>
                 </button>
               </div>
             ) : (
@@ -139,7 +127,7 @@ export const Navbar: React.FC = () => {
         </div>
       </div>
 
-      {/* Primary Nav: #ffffff canvas, 64px height, 1px inset hairline-soft bottom edge */}
+      {/* Primary Nav */}
       <div className="bg-canvas shadow-inset-hairline">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-8 xl:px-14 h-16 flex items-center justify-between gap-4">
           {/* Mobile Hamburger */}
@@ -154,7 +142,7 @@ export const Navbar: React.FC = () => {
             </button>
           </div>
 
-          {/* Left: Brand Emblem (32x32) */}
+          {/* Left: Brand Emblem */}
           <button
             type="button"
             onClick={() => handleSelectTab('catalog')}
@@ -179,7 +167,7 @@ export const Navbar: React.FC = () => {
             </span>
           </button>
 
-          {/* Center: Nav Links with 2px solid #111111 bottom underline on active */}
+          {/* Center: Role-Filtered Nav Links */}
           <nav className="hidden lg:flex items-center justify-center gap-6 h-full">
             {navItems.map((item) => {
               const active = activeTab === item.id;
@@ -210,37 +198,56 @@ export const Navbar: React.FC = () => {
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => handleSelectTab('escrow')}
+              onClick={() => handleSelectTab('catalog')}
               className="btn-icon-circular relative"
-              title="Escrow Orders"
-              aria-label="Escrow Orders"
+              title="รายการที่บันทึกไว้ (Watchlist)"
+              aria-label="รายการที่บันทึกไว้"
             >
-              <ShoppingBag className="w-5 h-5" />
-              {activeEscrowCount > 0 && (
+              <Heart className="w-5 h-5" />
+              {watchlistIds.length > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-ink text-canvas text-[10px] font-mono flex items-center justify-center">
-                  {activeEscrowCount}
+                  {watchlistIds.length}
                 </span>
               )}
             </button>
+
             <button
               type="button"
-              onClick={() => handleSelectTab('admin')}
-              className="btn-icon-circular relative hidden sm:inline-flex"
-              title="Admin Console"
-              aria-label="Admin Console"
+              onClick={() => handleSelectTab('escrow')}
+              className="btn-icon-circular relative"
+              title="คำสั่งซื้อ Escrow"
+              aria-label="คำสั่งซื้อ Escrow"
             >
-              <Shield className="w-5 h-5" />
-              {adminBadgeCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-sale text-canvas text-[10px] font-mono flex items-center justify-center">
-                  {adminBadgeCount}
+              <ShoppingBag className="w-5 h-5" />
+              {myActiveEscrowCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-ink text-canvas text-[10px] font-mono flex items-center justify-center">
+                  {myActiveEscrowCount}
                 </span>
               )}
             </button>
+
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => handleSelectTab('admin')}
+                className="btn-icon-circular relative hidden sm:inline-flex"
+                title="Admin Console"
+                aria-label="Admin Console"
+              >
+                <Shield className="w-5 h-5" />
+                {adminBadgeCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-sale text-canvas text-[10px] font-mono flex items-center justify-center">
+                    {adminBadgeCount}
+                  </span>
+                )}
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => setAuthModalOpen(true)}
               className="btn-icon-circular"
-              title="บัญชีผู้ใช้"
+              title={currentUser ? `บัญชีของ ${currentUser.name}` : 'เข้าสู่ระบบ / สมัครสมาชิก'}
               aria-label="บัญชีผู้ใช้"
             >
               <UserIcon className="w-5 h-5" />
@@ -251,7 +258,7 @@ export const Navbar: React.FC = () => {
 
       {/* Mobile Full-Height Left Slide Drawer */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden flex">
+        <div className="fixed inset-0 z-50 lg:hidden flex animate-fade-in">
           <div
             className="fixed inset-0 bg-ink/40"
             onClick={() => setMobileMenuOpen(false)}
@@ -293,24 +300,35 @@ export const Navbar: React.FC = () => {
             </div>
 
             <div className="pt-6 border-t border-hairline space-y-3">
-              <p className="text-xs text-mute font-medium">Demo Role Switcher</p>
-              <div className="flex flex-wrap gap-2">
-                {roles.map((r) => (
+              {currentUser ? (
+                <div className="space-y-3">
+                  <div className="text-sm">
+                    <p className="font-medium text-ink">{currentUser.name}</p>
+                    <p className="text-xs text-mute uppercase font-mono">{currentUser.role}</p>
+                  </div>
                   <button
-                    key={r.role}
                     type="button"
                     onClick={() => {
-                      switchDemoRole(r.role);
                       setMobileMenuOpen(false);
+                      setAuthModalOpen(true);
                     }}
-                    className={
-                      currentUser?.role === r.role ? 'filter-chip-active' : 'filter-chip'
-                    }
+                    className="btn-secondary w-full h-10 text-sm"
                   >
-                    {r.label}
+                    จัดการบัญชี / เปลี่ยนผู้ใช้
                   </button>
-                ))}
-              </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setAuthModalOpen(true);
+                  }}
+                  className="btn-primary w-full h-10 text-sm"
+                >
+                  Join Us / Sign In
+                </button>
+              )}
             </div>
           </aside>
         </div>

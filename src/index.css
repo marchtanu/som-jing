@@ -16,7 +16,54 @@
   }
 }
 
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes modalScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @layer components {
+  .animate-view-in {
+    animation: fadeInUp 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-modal-in {
+    animation: modalScaleIn 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 180ms ease-out both;
+  }
+
+  .card-image-zoom {
+    transition: transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
   .display-campaign {
     font-family: 'Bebas Neue', 'Inter', 'Noto Sans Thai', sans-serif;
     font-weight: 500;
@@ -38,13 +85,17 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    transition: transform 140ms ease, opacity 140ms ease;
+    transition: background-color 180ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease;
     cursor: pointer;
   }
 
+  .btn-primary:hover {
+    background-color: #29292b;
+  }
+
   .btn-primary:active {
-    transform: scale(0.5);
-    opacity: 0.5;
+    transform: scale(0.97);
+    opacity: 0.88;
   }
 
   .btn-primary:disabled {
@@ -66,13 +117,17 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    transition: transform 140ms ease, opacity 140ms ease;
+    transition: background-color 180ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease;
     cursor: pointer;
   }
 
+  .btn-secondary:hover {
+    background-color: #e8e8e9;
+  }
+
   .btn-secondary:active {
-    transform: scale(0.92);
-    opacity: 0.6;
+    transform: scale(0.97);
+    opacity: 0.85;
   }
 
   .btn-secondary:disabled {
@@ -93,13 +148,16 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    transition: transform 140ms ease, opacity 140ms ease;
+    transition: background-color 180ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease;
     cursor: pointer;
   }
 
+  .btn-outline-on-image:hover {
+    background-color: #f5f5f5;
+  }
+
   .btn-outline-on-image:active {
-    transform: scale(0.92);
-    opacity: 0.7;
+    transform: scale(0.97);
   }
 
   .btn-icon-circular {
@@ -111,13 +169,16 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: transform 140ms ease, opacity 140ms ease;
+    transition: background-color 180ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
     cursor: pointer;
   }
 
+  .btn-icon-circular:hover {
+    background-color: #e5e5e5;
+  }
+
   .btn-icon-circular:active {
-    transform: scale(0.88);
-    opacity: 0.65;
+    transform: scale(0.93);
   }
 
   .filter-chip {
@@ -133,7 +194,16 @@
     align-items: center;
     gap: 6px;
     white-space: nowrap;
+    transition: border-color 160ms ease, background-color 160ms ease, transform 140ms ease;
     cursor: pointer;
+  }
+
+  .filter-chip:hover {
+    border-color: #111111;
+  }
+
+  .filter-chip:active {
+    transform: scale(0.97);
   }
 
   .filter-chip-active {
@@ -149,7 +219,12 @@
     align-items: center;
     gap: 6px;
     white-space: nowrap;
+    transition: transform 140ms ease, opacity 140ms ease;
     cursor: pointer;
+  }
+
+  .filter-chip-active:active {
+    transform: scale(0.97);
   }
 
   .search-pill {
@@ -161,7 +236,7 @@
     font-size: 16px;
     line-height: 1.5;
     border: 2px solid transparent;
-    transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+    transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
   }
 
   .search-pill::placeholder {
@@ -183,6 +258,7 @@
     padding: 10px 16px;
     font-size: 14px;
     line-height: 1.5;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
   }
 
   .hairline-input:focus {
@@ -208,4 +284,14 @@
 
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-view-in,
+  .animate-modal-in,
+  .animate-fade-in,
+  .card-image-zoom {
+    animation: none !important;
+    transition: none !important;
+  }
 }

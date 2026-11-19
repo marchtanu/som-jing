@@ -6,7 +6,7 @@ export const ReportView: React.FC = () => {
   const { setActiveTab, setSelectedProductId } = useStore();
 
   return (
-    <div className="space-y-12 max-w-5xl mx-auto">
+    <div className="space-y-12 max-w-5xl mx-auto animate-view-in">
       {/* Header */}
       <div className="pb-6 border-b border-hairline flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div className="space-y-1">
@@ -37,7 +37,7 @@ export const ReportView: React.FC = () => {
           {[
             {
               title: '1. สมัครสมาชิกและเข้าสู่ระบบ',
-              desc: 'ลงทะเบียนและเข้าสู่ระบบแยกบทบาท (ผู้ซื้อ / ผู้ขาย / แอดมิน) พร้อมแถบ Demo Role Switcher',
+              desc: 'ลงทะเบียนและเข้าสู่ระบบแยกสิทธิ์ตามบทบาทจริง (Customer / Seller / Admin) ป้องกันการเข้าถึงข้ามสิทธิ์',
               action: () => setActiveTab('catalog'),
             },
             {

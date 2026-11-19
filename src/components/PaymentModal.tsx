@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Building2, CreditCard, Lock, QrCode, X } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { PaymentMethod } from '../types';
@@ -6,32 +6,79 @@ import { formatTHB } from '../utils/format';
 import { SafeImage, VerificationBadge } from './ui';
 
 export const PaymentModal: React.FC = () => {
-  const { checkoutTarget, setCheckoutTarget, completeSimulatedPayment } = useStore();
+  const { checkoutTarget, setCheckoutTarget, completeSimulatedPayment, currentUser } = useStore();
   const [method, setMethod] = useState<PaymentMethod>('PromptPay QR');
   const [processing, setProcessing] = useState(false);
+
+  // Editable Real Form Fields
+  const [shippingAddress, setShippingAddress] = useState('');
   const [selectedBank, setSelectedBank] = useState('K PLUS (กสิกรไทย)');
+  const [bankAccountRef, setBankAccountRef] = useState('089-412-8890');
+  const [promptPayRef, setPromptPayRef] = useState('8841');
+  const [cardHolder, setCardHolder] = useState('');
+  const [cardNumber, setCardNumber] = useState('4532 8810 4490 8890');
+  const [cardExpiry, setCardExpiry] = useState('12/29');
+  const [cardCvv, setCardCvv] = useState('842');
+  const [formError, setFormError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (checkoutTarget) {
+      setShippingAddress(
+        currentUser?.defaultAddress ||
+          '99/14 ถนนพุทธมณฑลสาย 4 ต.ศาลายา อ.พุทธมณฑล จ.นครปฐม 73170'
+      );
+      setCardHolder(currentUser?.name || 'THANAPHAT MARCH');
+      setBankAccountRef(currentUser?.phone || '089-412-8890');
+      setFormError(null);
+    }
+  }, [checkoutTarget, currentUser]);
 
   if (!checkoutTarget) return null;
 
   const escrowFee = Math.round(checkoutTarget.amount * 0.02);
   const totalPaid = checkoutTarget.amount + escrowFee;
 
-  const handleConfirmPayment = () => {
+  const handleConfirmPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+
+    if (!shippingAddress.trim()) {
+      setFormError('กรุณากรอกที่อยู่สำหรับจัดส่งสินค้า');
+      return;
+    }
+
+    if (method === 'Credit Card') {
+      if (!cardHolder.trim() || cardNumber.replace(/\s+/g, '').length < 12 || !cardExpiry.trim() || cardCvv.trim().length < 3) {
+        setFormError('กรุณากรอกข้อมูลบัตรเครดิต/เดบิตให้ครบถ้วน');
+        return;
+      }
+    }
+
+    if (method === 'PromptPay QR' && promptPayRef.trim().length < 4) {
+      setFormError('กรุณากรอกเลขท้ายอ้างอิงสลิป 4 หลัก');
+      return;
+    }
+
+    if (method === 'Mobile Banking' && !bankAccountRef.trim()) {
+      setFormError('กรุณากรอกเบอร์โทร/เลขที่อ้างอิงแอปธนาคาร');
+      return;
+    }
+
     setProcessing(true);
     setTimeout(() => {
       setProcessing(false);
-      completeSimulatedPayment(checkoutTarget, method);
-    }, 650);
+      completeSimulatedPayment(checkoutTarget, method, shippingAddress.trim());
+    }, 550);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 overflow-y-auto">
-      <div className="bg-canvas border border-hairline rounded-none max-w-xl w-full my-8 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 overflow-y-auto animate-fade-in">
+      <div className="bg-canvas border border-hairline rounded-none max-w-xl w-full my-8 overflow-hidden animate-modal-in">
         <div className="flex items-center justify-between px-6 py-5 border-b border-hairline">
           <div className="flex items-center gap-2">
             <Lock className="w-5 h-5 text-ink" />
             <h2 className="text-2xl font-medium text-ink leading-[1.2]">
-              ชำระเงินจำลอง &amp; พักเงิน Escrow
+              ชำระเงิน &amp; พักเงินในระบบ Escrow
             </h2>
           </div>
           <button
@@ -44,9 +91,9 @@ export const PaymentModal: React.FC = () => {
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
+        <form onSubmit={handleConfirmPayment} className="p-6 space-y-5">
           {/* Item Summary */}
-          <div className="flex items-center gap-4 pb-6 border-b border-hairline">
+          <div className="flex items-center gap-4 pb-5 border-b border-hairline">
             <SafeImage
               src={checkoutTarget.productImage}
               alt={checkoutTarget.productTitle}
@@ -60,19 +107,34 @@ export const PaymentModal: React.FC = () => {
                   compact
                 />
                 <span className="text-xs font-medium text-mute">
-                  Seller: {checkoutTarget.sellerName}
+                  ผู้ขาย: {checkoutTarget.sellerName}
                 </span>
               </div>
               <p className="text-base font-medium text-ink line-clamp-2">
                 {checkoutTarget.productTitle}
               </p>
+              {checkoutTarget.selectedOptionLabel && (
+                <p className="text-xs font-medium text-charcoal">
+                  ตัวเลือก: {checkoutTarget.selectedOptionLabel}
+                </p>
+              )}
             </div>
           </div>
 
-          <p className="text-sm text-charcoal bg-soft-cloud p-4 leading-relaxed">
-            <strong className="text-ink">SomJing Escrow Protection:</strong>{' '}
-            ยอดชำระจะถูกพักไว้ในบัญชีกลางของแพลตฟอร์มและจะไม่โอนให้ผู้ขาย จนกว่าผู้ขายจะจัดส่งและคุณกดยืนยันรับของเรียบร้อยแล้ว
-          </p>
+          {/* Shipping Address */}
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1.5">
+              ที่อยู่จัดส่งสินค้า &amp; เบอร์ผู้รับ *
+            </label>
+            <textarea
+              rows={2}
+              required
+              value={shippingAddress}
+              onChange={(e) => setShippingAddress(e.target.value)}
+              placeholder="กรอกชื่อผู้รับ บ้านเลขที่ ถนน ตำบล/แขวง อำเภอ/เขต จังหวัด รหัสไปรษณีย์"
+              className="hairline-input w-full text-sm"
+            />
+          </div>
 
           {/* Payment Method Chips */}
           <div className="space-y-2.5">
@@ -108,7 +170,7 @@ export const PaymentModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Method Details */}
+          {/* Editable Method Details */}
           {method === 'PromptPay QR' && (
             <div className="border border-hairline p-4 flex flex-col sm:flex-row items-center gap-4">
               <div className="w-28 h-28 bg-soft-cloud p-2 shrink-0 flex items-center justify-center">
@@ -131,15 +193,24 @@ export const PaymentModal: React.FC = () => {
                   <rect x="72" y="80" width="18" height="12" fill="currentColor" />
                 </svg>
               </div>
-              <div className="text-sm space-y-1 text-center sm:text-left">
-                <p className="font-medium text-ink">Thai QR Payment (Escrow Sandbox)</p>
-                <p className="text-mute">
-                  ยอดพักเงิน:{' '}
+              <div className="flex-1 text-sm space-y-2 w-full">
+                <p className="font-medium text-ink">Thai QR Payment (SomJing Escrow)</p>
+                <p className="text-xs text-mute">
+                  ยอดโอน:{' '}
                   <span className="font-mono font-medium text-ink">{formatTHB(totalPaid)}</span>
                 </p>
-                <p className="text-xs text-success font-medium">
-                  * ระบบจำลองสำหรับการสาธิต ไม่มีการตัดเงินจริง
-                </p>
+                <div>
+                  <label className="block text-xs font-medium text-mute mb-1">
+                    เลขท้ายอ้างอิงสลิป (4 หลัก)
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={8}
+                    value={promptPayRef}
+                    onChange={(e) => setPromptPayRef(e.target.value)}
+                    className="hairline-input w-full font-mono text-xs py-1.5"
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -147,37 +218,74 @@ export const PaymentModal: React.FC = () => {
           {method === 'Credit Card' && (
             <div className="border border-hairline p-4 space-y-3 text-sm">
               <div className="flex items-center justify-between">
-                <span className="font-medium text-ink">Visa / Mastercard (Demo)</span>
-                <span className="font-mono text-xs text-mute">3D-Secure</span>
+                <span className="font-medium text-ink">Visa / Mastercard</span>
+                <span className="font-mono text-xs text-mute">3D-Secure Escrow</span>
               </div>
               <input
                 type="text"
-                readOnly
-                value="4532 •••• •••• 8890"
+                value={cardHolder}
+                onChange={(e) => setCardHolder(e.target.value)}
+                placeholder="ชื่อบนบัตร (Cardholder Name)"
+                className="hairline-input w-full text-sm"
+              />
+              <input
+                type="text"
+                value={cardNumber}
+                onChange={(e) => setCardNumber(e.target.value)}
+                placeholder="หมายเลขบัตร 16 หลัก"
                 className="hairline-input w-full font-mono"
               />
               <div className="grid grid-cols-2 gap-3">
-                <input type="text" readOnly value="12 / 29" className="hairline-input font-mono" />
-                <input type="text" readOnly value="CVV •••" className="hairline-input font-mono" />
+                <input
+                  type="text"
+                  value={cardExpiry}
+                  onChange={(e) => setCardExpiry(e.target.value)}
+                  placeholder="MM/YY"
+                  className="hairline-input font-mono"
+                />
+                <input
+                  type="password"
+                  maxLength={4}
+                  value={cardCvv}
+                  onChange={(e) => setCardCvv(e.target.value)}
+                  placeholder="CVV"
+                  className="hairline-input font-mono"
+                />
               </div>
             </div>
           )}
 
           {method === 'Mobile Banking' && (
-            <div className="border border-hairline p-4 space-y-2 text-sm">
-              <label className="block font-medium text-ink">เลือกธนาคารจำลอง</label>
-              <select
-                value={selectedBank}
-                onChange={(e) => setSelectedBank(e.target.value)}
-                className="hairline-input w-full"
-              >
-                <option>K PLUS (กสิกรไทย)</option>
-                <option>SCB EASY (ไทยพาณิชย์)</option>
-                <option>Krungthai NEXT (กรุงไทย)</option>
-                <option>Bangkok Bank Mobile (กรุงเทพ)</option>
-              </select>
+            <div className="border border-hairline p-4 space-y-3 text-sm">
+              <div>
+                <label className="block text-xs font-medium text-mute mb-1">เลือกธนาคาร</label>
+                <select
+                  value={selectedBank}
+                  onChange={(e) => setSelectedBank(e.target.value)}
+                  className="hairline-input w-full"
+                >
+                  <option>K PLUS (กสิกรไทย)</option>
+                  <option>SCB EASY (ไทยพาณิชย์)</option>
+                  <option>Krungthai NEXT (กรุงไทย)</option>
+                  <option>Bangkok Bank Mobile (กรุงเทพ)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-mute mb-1">
+                  เบอร์โทรศัพท์ที่ผูกกับแอปธนาคาร
+                </label>
+                <input
+                  type="text"
+                  value={bankAccountRef}
+                  onChange={(e) => setBankAccountRef(e.target.value)}
+                  placeholder="08x-xxx-xxxx"
+                  className="hairline-input w-full font-mono"
+                />
+              </div>
             </div>
           )}
+
+          {formError && <p className="text-sm font-medium text-sale">{formError}</p>}
 
           {/* Price Breakdown */}
           <div className="border-t border-hairline pt-4 space-y-2 text-sm">
@@ -197,19 +305,14 @@ export const PaymentModal: React.FC = () => {
             </div>
           </div>
 
-          <button
-            type="button"
-            disabled={processing}
-            onClick={handleConfirmPayment}
-            className="btn-primary w-full"
-          >
+          <button type="submit" disabled={processing} className="btn-primary w-full">
             <span>
               {processing
                 ? 'กำลังพักเงินเข้าบัญชี Escrow...'
                 : `ยืนยันชำระเงินจำลอง ${formatTHB(totalPaid)}`}
             </span>
           </button>
-        </div>
+        </form>
       </div>
     </div>
   );

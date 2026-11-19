@@ -61,7 +61,7 @@ Vite serves app at `http://localhost:5173/`. Press `Ctrl + C` in terminal to sto
 npm test
 ```
 
-Runs 12 Vitest test cases (`TC-01` to `TC-12`) covering auth, catalog, bidding, verify, wanted offers, 4-step escrow, and admin actions.
+Runs 13 Vitest test cases (`TC-01` to `TC-13`) covering real RBAC auth, product option sync, watchlist, bidding, verify, wanted offers, 4-step escrow, and admin actions.
 
 ### 6. Build & preview production bundle
 
@@ -82,7 +82,7 @@ Output lands in `dist/`. Deploy script included for GitHub Pages (`npm run deplo
 
 ## Demo Accounts
 
-All demo accounts use password `password123`. Or use top utility bar (`Demo Role: ผู้ซื้อ | ผู้ขาย | แอดมิน`) to switch role in one click. Click `รีเซ็ตข้อมูล` in top bar to restore initial seed data.
+All demo accounts use password `password123`. Sign out from Account Modal (`User Icon`) and sign in with another account to test Buyer, Seller, and Admin permissions separately.
 
 | Role | Email | Password |
 | :--- | :--- | :--- |
@@ -92,14 +92,14 @@ All demo accounts use password `password123`. Or use top utility bar (`Demo Role
 
 ## MVP Features Checklist
 
-- **Auth**: Register and sign in (`AuthModal`) + top utility bar role switcher.
-- **Catalog & Search**: Search by title/seller/serial/certificate ID, filter 4 categories (`art-toys`, `sneakers`, `gadgets`, `watches`), sale type, and Verified only.
-- **Live Auction Detail**: Real-time countdown timer, current bid, quick-bid chips, custom bid input, bid history, Verified Badge + Certificate ID.
-- **Sell Listing**: Create auction or fixed-price listing, attach verification request at creation.
+- **Auth & RBAC**: Register (Buyer/Seller only) and Sign In (`AuthModal`). Strict role checks hide Admin Console from customers/sellers and enforce Buyer vs Seller ownership on bids, Wanted offers, and Escrow steps.
+- **Catalog, Swatches & Watchlist**: Search by title/seller/serial/certificate ID, filter 4 categories, toggle Verified/Saved (`watchlist`), and pick product options directly on cards.
+- **Live Auction Detail**: Synced product options & specs table, real-time countdown timer, current bid, quick-bid chips, custom bid input, bid history, Verified Badge + Certificate ID.
+- **Sell Listing**: Create auction or fixed-price listing with custom product options/editions and optional Verify request.
 - **Request Verify**: Submit serial number and proof notes for admin review.
-- **Wanted Board**: Post wanted listing with target budget, submit competing seller offers, accept offer directly into Escrow checkout.
-- **Simulated Payment & Escrow**: Mock PromptPay QR / Credit Card / Mobile Banking checkout, 4-step lifecycle (`held` -> `shipped` -> `received` -> `released`), audit log, and dispute filing.
-- **Admin Console**: Approve/reject verification requests (auto-issues `SJ-CERT-2026-xxxx`) and adjudicate complaints (`resolved_refund` / `resolved_release`).
+- **Wanted Board**: Post wanted listing with target budget, sellers submit competing offers, listing owner selects offer directly into Escrow checkout.
+- **Simulated Payment & Escrow**: Editable shipping address & payment methods (PromptPay QR / Credit Card / Mobile Banking), 4-step lifecycle (`held` -> `shipped` -> `received` -> `released`), audit log, and dispute filing.
+- **Admin Console**: Accessible only to logged-in `admin` accounts. Approve/reject verification requests (auto-issues `SJ-CERT-2026-xxxx`) and adjudicate complaints (`resolved_refund` / `resolved_release`).
 
 ## Tech Stack
 
@@ -107,4 +107,4 @@ All demo accounts use password `password123`. Or use top utility bar (`Demo Role
 - Vite 5 + Tailwind CSS 3
 - Lucide React
 - Vitest + React Testing Library
-- React Context + Browser `localStorage` (`somjing_prototype_v1`)
+- React Context + Browser `localStorage` (`somjing_prototype_v2`)

@@ -12,11 +12,33 @@ export const AdminView: React.FC = () => {
     resolveComplaint,
     escrowOrders,
     currentUser,
-    switchDemoRole,
+    setAuthModalOpen,
   } = useStore();
 
   const [verifyNotes, setVerifyNotes] = useState<Record<string, string>>({});
   const [complaintNotes, setComplaintNotes] = useState<Record<string, string>>({});
+
+  if (currentUser?.role !== 'admin') {
+    return (
+      <div className="bg-soft-cloud border border-hairline p-12 text-center space-y-4 max-w-xl mx-auto my-8 animate-view-in">
+        <Shield className="w-8 h-8 text-ink mx-auto" />
+        <h1 className="text-2xl font-medium text-ink">
+          จำกัดสิทธิ์การเข้าถึง (Admin Only)
+        </h1>
+        <p className="text-sm text-charcoal leading-relaxed">
+          บัญชีลูกค้าและผู้ขายทั่วไปไม่สามารถเข้าถึงศูนย์จัดการ Verify และข้อร้องเรียนของระบบได้
+          กรุณาออกจากระบบแล้วเข้าสู่ระบบด้วยบัญชีผู้ดูแลระบบ
+        </p>
+        <button
+          type="button"
+          onClick={() => setAuthModalOpen(true)}
+          className="btn-primary h-11 px-6 text-sm"
+        >
+          เปิดหน้าจัดการบัญชี / Sign In
+        </button>
+      </div>
+    );
+  }
 
   const pendingVerifications = verificationRequests.filter((r) => r.status === 'pending');
   const reviewedVerifications = verificationRequests.filter((r) => r.status !== 'pending');
@@ -28,28 +50,14 @@ export const AdminView: React.FC = () => {
     .reduce((acc, o) => acc + o.totalPaid, 0);
 
   return (
-    <div className="space-y-12">
-      {/* Header */}
-      <div className="pb-6 border-b border-hairline flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-[32px] font-medium leading-[1.2] text-ink">
-            Admin Console · Verification &amp; Disputes
-          </h1>
-          <p className="text-base text-mute mt-1">
-            ตรวจสอบหลักฐานเพื่ออนุมัติ Verified Badge และตัดสินข้อร้องเรียนในระบบ Escrow
-          </p>
-        </div>
-
-        {currentUser?.role !== 'admin' && (
-          <button
-            type="button"
-            onClick={() => switchDemoRole('admin')}
-            className="btn-primary shrink-0"
-          >
-            <Shield className="w-4 h-4" />
-            <span>สลับบัญชีเป็น Admin</span>
-          </button>
-        )}
+    <div className="space-y-12 animate-view-in">
+      <div className="pb-6 border-b border-hairline">
+        <h1 className="text-[32px] font-medium leading-[1.2] text-ink">
+          Admin Console · Verification &amp; Disputes
+        </h1>
+        <p className="text-base text-mute mt-1">
+          ตรวจสอบหลักฐานเพื่ออนุมัติ Verified Badge และตัดสินข้อร้องเรียนในระบบ Escrow
+        </p>
       </div>
 
       {/* Flat 3-up Metric Strip */}
@@ -89,7 +97,7 @@ export const AdminView: React.FC = () => {
 
         {pendingVerifications.length === 0 ? (
           <div className="bg-soft-cloud p-8 text-center text-sm text-mute">
-            ไม่มีคำขอ Verify ที่ค้างอยู่ — ส่งคำขอใหม่ได้จากหน้า &ldquo;ขอ Verify&rdquo; หรือ &ldquo;ลงขายสินค้า&rdquo;
+            ไม่มีคำขอ Verify ที่ค้างอยู่ในขณะนี้
           </div>
         ) : (
           <div className="grid lg:grid-cols-2 gap-6">

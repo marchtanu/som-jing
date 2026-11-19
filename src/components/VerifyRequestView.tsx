@@ -1,21 +1,17 @@
 import React, { useState } from 'react';
-import { CheckCircle2, ShieldCheck } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { ProductCategory } from '../types';
 import { CATEGORY_LABELS, formatThaiDateTime } from '../utils/format';
 import { SafeImage, VerificationBadge } from './ui';
 
 export const VerifyRequestView: React.FC = () => {
-  const {
-    products,
-    verificationRequests,
-    submitVerificationRequest,
-    setActiveTab,
-    switchDemoRole,
-  } = useStore();
+  const { products, verificationRequests, submitVerificationRequest, currentUser } = useStore();
 
   const eligibleProducts = products.filter(
-    (p) => p.verificationStatus === 'unverified' || p.verificationStatus === 'rejected'
+    (p) =>
+      (p.verificationStatus === 'unverified' || p.verificationStatus === 'rejected') &&
+      (!currentUser || p.sellerId === currentUser.id)
   );
 
   const [mode, setMode] = useState<'existing' | 'standalone'>(
@@ -66,32 +62,17 @@ export const VerifyRequestView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-12">
-      <div className="pb-6 border-b border-hairline flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-[32px] font-medium leading-[1.2] text-ink">
-            ขอรับรองความแท้ (SomJing Verification)
-          </h1>
-          <p className="text-base text-mute mt-1">
-            ส่ง Serial Number และหลักฐานภาพถ่ายให้ผู้เชี่ยวชาญตรวจสอบเพื่อรับตรา SomJing Verified Badge
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            switchDemoRole('admin');
-            setActiveTab('admin');
-          }}
-          className="btn-secondary shrink-0"
-        >
-          <ShieldCheck className="w-4 h-4 text-success" />
-          <span>สลับเป็นแอดมินเพื่อกดอนุมัติ</span>
-        </button>
+    <div className="space-y-12 animate-view-in">
+      <div className="pb-6 border-b border-hairline">
+        <h1 className="text-[32px] font-medium leading-[1.2] text-ink">
+          ขอรับรองความแท้ (SomJing Verification)
+        </h1>
+        <p className="text-base text-mute mt-1">
+          ส่ง Serial Number และหลักฐานภาพถ่ายให้ผู้เชี่ยวชาญตรวจสอบเพื่อรับตรา SomJing Verified Badge
+        </p>
       </div>
 
       <div className="grid lg:grid-cols-12 gap-10 items-start">
-        {/* Submission Form */}
         <form onSubmit={handleSubmit} className="lg:col-span-5 space-y-5">
           <h2 className="text-xl font-medium text-ink">ส่งคำขอ Verify สินค้า</h2>
 
@@ -99,14 +80,22 @@ export const VerifyRequestView: React.FC = () => {
             <button
               type="button"
               onClick={() => setMode('existing')}
-              className={mode === 'existing' ? 'filter-chip-active flex-1 justify-center' : 'filter-chip flex-1 justify-center'}
+              className={
+                mode === 'existing'
+                  ? 'filter-chip-active flex-1 justify-center'
+                  : 'filter-chip flex-1 justify-center'
+              }
             >
               จากสินค้าที่ลงขาย
             </button>
             <button
               type="button"
               onClick={() => setMode('standalone')}
-              className={mode === 'standalone' ? 'filter-chip-active flex-1 justify-center' : 'filter-chip flex-1 justify-center'}
+              className={
+                mode === 'standalone'
+                  ? 'filter-chip-active flex-1 justify-center'
+                  : 'filter-chip flex-1 justify-center'
+              }
             >
               ระบุสินค้าใหม่
             </button>
@@ -119,7 +108,7 @@ export const VerifyRequestView: React.FC = () => {
               </label>
               {eligibleProducts.length === 0 ? (
                 <div className="bg-soft-cloud p-4 text-sm text-mute">
-                  สินค้าทั้งหมดถูกส่งตรวจหรือผ่าน Verify แล้ว — คุณสามารถเลือกโหมด &ldquo;ระบุสินค้าใหม่&rdquo; เพื่อทดสอบเพิ่มเติมได้
+                  ไม่มีสินค้าของคุณที่รอ Verify — คุณสามารถเลือกโหมด &ldquo;ระบุสินค้าใหม่&rdquo; เพื่อส่งคำขอได้
                 </div>
               ) : (
                 <select
@@ -225,10 +214,9 @@ export const VerifyRequestView: React.FC = () => {
           </button>
         </form>
 
-        {/* Verification Status History */}
         <div className="lg:col-span-7 space-y-4">
           <h2 className="text-xl font-medium text-ink">
-            สถานะคำขอ Verify ทั้งหมด ({verificationRequests.length})
+            รายการคำขอ Verify ({verificationRequests.length})
           </h2>
 
           <div className="divide-y divide-hairline border-t border-b border-hairline">
