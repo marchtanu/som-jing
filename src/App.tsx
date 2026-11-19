@@ -14,7 +14,7 @@ import { VerifyRequestView } from './components/VerifyRequestView';
 import { WantedBoardView } from './components/WantedBoardView';
 
 const MainShell: React.FC = () => {
-  const { activeTab, selectedProductId } = useStore();
+  const { activeTab, selectedProductId, setActiveTab, setSelectedProductId } = useStore();
 
   const renderContent = () => {
     if (activeTab === 'catalog' && selectedProductId) {
@@ -40,21 +40,105 @@ const MainShell: React.FC = () => {
     }
   };
 
+  const navigateFooter = (tab: typeof activeTab) => {
+    setSelectedProductId(null);
+    setActiveTab(tab);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-ivory text-ink">
+    <div className="min-h-screen flex flex-col bg-canvas text-ink">
       <Navbar />
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
+      <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-8 xl:px-14 py-6 sm:py-8">
         {renderContent()}
       </main>
-      <footer className="border-t border-stoneBorder bg-paper py-6 mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-mutedInk">
-          <p>
-            <strong className="text-ink">SomJing (สมจริง)</strong> — ต้นแบบระบบ E-Commerce
-            ซื้อขายและประมูลของสะสมพร้อมระบบ Verified Badge &amp; Escrow Protection
-          </p>
-          <p className="font-mono">
-            University Prototype • GitHub: marchtanu/som-jing
-          </p>
+
+      {/* Nike-style 4-column Footer */}
+      <footer className="bg-canvas border-t border-hairline mt-12">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-8 xl:px-14 py-12 space-y-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="space-y-3">
+              <h3 className="text-base font-medium text-ink">Resources</h3>
+              <ul className="space-y-2.5 text-sm font-medium text-mute">
+                <li>
+                  <button type="button" onClick={() => navigateFooter('catalog')} className="hover:text-ink">
+                    หน้ารวมสินค้าและประมูล
+                  </button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => navigateFooter('wanted')} className="hover:text-ink">
+                    Wanted Listing Board
+                  </button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => navigateFooter('sell')} className="hover:text-ink">
+                    ลงขายสินค้า / เปิดรอบประมูล
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-base font-medium text-ink">Help &amp; Escrow</h3>
+              <ul className="space-y-2.5 text-sm font-medium text-mute">
+                <li>
+                  <button type="button" onClick={() => navigateFooter('escrow')} className="hover:text-ink">
+                    ติดตามสถานะ Escrow 4 ขั้นตอน
+                  </button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => navigateFooter('verify')} className="hover:text-ink">
+                    ขอรับรองความแท้ (Verify)
+                  </button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => navigateFooter('admin')} className="hover:text-ink">
+                    ศูนย์จัดการข้อร้องเรียนแอดมิน
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-base font-medium text-ink">Company &amp; Report</h3>
+              <ul className="space-y-2.5 text-sm font-medium text-mute">
+                <li>
+                  <button type="button" onClick={() => navigateFooter('report')} className="hover:text-ink">
+                    รายงานบทที่ 5 (หัวข้อ 5.1 – 5.7)
+                  </button>
+                </li>
+                <li>
+                  <a
+                    href="https://github.com/marchtanu/som-jing"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hover:text-ink"
+                  >
+                    GitHub Repository
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-base font-medium text-ink">Trust &amp; Ethics</h3>
+              <ul className="space-y-2.5 text-sm font-medium text-mute">
+                <li>SomJing Authenticity Guarantee</li>
+                <li>PDPA พ.ศ. 2562 Compliance</li>
+                <li>E-Transactions Act &amp; Consumer Protection</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="pt-6 border-t border-hairline flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[9px] font-medium text-mute tracking-wide uppercase">
+            <p>© 2026 SomJing (สมจริง) University E-Commerce Prototype. All Rights Reserved.</p>
+            <div className="flex flex-wrap gap-4">
+              <span>Thailand (THB)</span>
+              <span>Terms of Sale</span>
+              <span>Privacy Policy</span>
+              <span>Escrow Protection Policy</span>
+            </div>
+          </div>
         </div>
       </footer>
 

@@ -1,17 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  BadgeCheck,
-  BookOpen,
-  Gavel,
-  Lock,
-  LogIn,
   LogOut,
-  PlusCircle,
+  Menu,
   RotateCcw,
-  SearchCode,
   Shield,
-  Store,
-  UserCheck,
+  ShoppingBag,
+  User as UserIcon,
+  X,
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { ActiveTab, UserRole } from '../types';
@@ -32,6 +27,8 @@ export const Navbar: React.FC = () => {
     setSelectedProductId,
   } = useStore();
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   const pendingVerifyCount = verificationRequests.filter((r) => r.status === 'pending').length;
   const pendingComplaintCount = complaints.filter((c) => c.status === 'pending').length;
   const adminBadgeCount = pendingVerifyCount + pendingComplaintCount;
@@ -43,114 +40,147 @@ export const Navbar: React.FC = () => {
   const navItems: {
     id: ActiveTab;
     label: string;
-    icon: React.ReactNode;
     badge?: number;
   }[] = [
-    { id: 'catalog', label: 'ตลาดสินค้า & ประมูล', icon: <Gavel className="w-4 h-4" /> },
-    { id: 'sell', label: 'ลงขายสินค้า', icon: <PlusCircle className="w-4 h-4" /> },
-    { id: 'verify', label: 'ขอ Verify', icon: <BadgeCheck className="w-4 h-4" /> },
-    {
-      id: 'wanted',
-      label: 'Wanted Board',
-      icon: <SearchCode className="w-4 h-4" />,
-      badge: openWantedCount,
-    },
-    {
-      id: 'escrow',
-      label: 'สถานะ Escrow',
-      icon: <Lock className="w-4 h-4" />,
-      badge: activeEscrowCount,
-    },
-    {
-      id: 'admin',
-      label: 'หน้าแอดมิน',
-      icon: <Shield className="w-4 h-4" />,
-      badge: adminBadgeCount,
-    },
-    { id: 'report', label: 'รายงานบทที่ 5', icon: <BookOpen className="w-4 h-4" /> },
+    { id: 'catalog', label: 'Explore & Auctions' },
+    { id: 'sell', label: 'ลงขายสินค้า' },
+    { id: 'verify', label: 'ขอ Verify' },
+    { id: 'wanted', label: 'Wanted', badge: openWantedCount },
+    { id: 'escrow', label: 'Escrow', badge: activeEscrowCount },
+    { id: 'admin', label: 'Admin', badge: adminBadgeCount },
+    { id: 'report', label: 'บทที่ 5' },
   ];
 
   const handleSelectTab = (tab: ActiveTab) => {
     setSelectedProductId(null);
     setActiveTab(tab);
+    setMobileMenuOpen(false);
   };
 
   const roles: { role: UserRole; label: string }[] = [
-    { role: 'buyer', label: 'ผู้ซื้อ (Buyer)' },
-    { role: 'seller', label: 'ผู้ขาย (Seller)' },
-    { role: 'admin', label: 'แอดมิน (Admin)' },
+    { role: 'buyer', label: 'ผู้ซื้อ' },
+    { role: 'seller', label: 'ผู้ขาย' },
+    { role: 'admin', label: 'แอดมิน' },
   ];
 
   return (
-    <header className="sticky top-0 z-40 bg-paper/95 backdrop-blur border-b border-stoneBorder">
-      {/* Top Demo Control Bar */}
-      <div className="bg-ink text-ivory text-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="inline-flex items-center gap-1.5 text-ivory/80 font-medium">
-              <UserCheck className="w-3.5 h-3.5 text-vermilion" />
-              <span>สลับบทบาทสาธิต (Demo Switcher):</span>
-            </span>
-            <div className="inline-flex items-center rounded-lg bg-white/10 p-0.5 gap-0.5">
-              {roles.map((r) => {
+    <header className="sticky top-0 z-40 bg-canvas">
+      {/* Utility Bar: #f5f5f5 soft-cloud, 36px height, right-aligned cluster */}
+      <div className="bg-soft-cloud text-ink text-xs font-medium h-9">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-8 xl:px-14 h-full flex items-center justify-between gap-4">
+          <div className="hidden md:flex items-center gap-2 text-mute">
+            <span>Demo Role:</span>
+            <div className="inline-flex items-center gap-2">
+              {roles.map((r, idx) => {
                 const isActive = currentUser?.role === r.role;
                 return (
-                  <button
-                    key={r.role}
-                    type="button"
-                    onClick={() => switchDemoRole(r.role)}
-                    className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
-                      isActive
-                        ? 'bg-vermilion text-white'
-                        : 'text-ivory/80 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    {r.label}
-                  </button>
+                  <React.Fragment key={r.role}>
+                    {idx > 0 && <span className="text-hairline">|</span>}
+                    <button
+                      type="button"
+                      onClick={() => switchDemoRole(r.role)}
+                      className={`transition-colors ${
+                        isActive
+                          ? 'text-ink font-semibold underline underline-offset-4'
+                          : 'text-mute hover:text-ink'
+                      }`}
+                    >
+                      {r.label}
+                    </button>
+                  </React.Fragment>
                 );
               })}
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3 ml-auto text-xs font-medium text-ink">
             <button
               type="button"
               onClick={resetDemoData}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/10 hover:bg-white/20 text-ivory transition-colors"
+              className="inline-flex items-center gap-1 hover:text-mute transition-colors"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>รีเซ็ตข้อมูลตัวอย่าง</span>
+              <RotateCcw className="w-3 h-3" />
+              <span>รีเซ็ตข้อมูล</span>
             </button>
+            <span className="text-hairline">|</span>
+            <button
+              type="button"
+              onClick={() => handleSelectTab('report')}
+              className="hover:text-mute transition-colors"
+            >
+              Report Ch.5
+            </button>
+            <span className="text-hairline">|</span>
+            {currentUser ? (
+              <div className="inline-flex items-center gap-2">
+                <span className="truncate max-w-[140px]">
+                  Hi, {currentUser.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={logoutUser}
+                  className="text-mute hover:text-ink inline-flex items-center gap-1"
+                  aria-label="Sign Out"
+                >
+                  <LogOut className="w-3 h-3" />
+                  <span className="hidden sm:inline">Sign Out</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAuthModalOpen(true)}
+                className="hover:text-mute transition-colors"
+              >
+                Join Us / Sign In
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Primary Header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-16 gap-4">
+      {/* Primary Nav: #ffffff canvas, 64px height, 1px inset hairline-soft bottom edge */}
+      <div className="bg-canvas shadow-inset-hairline">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-8 xl:px-14 h-16 flex items-center justify-between gap-4">
+          {/* Mobile Hamburger */}
+          <div className="flex items-center gap-2 lg:hidden">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className="btn-icon-circular"
+              aria-label="เปิดเมนู"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Left: Brand Emblem (32x32) */}
           <button
             type="button"
             onClick={() => handleSelectTab('catalog')}
-            className="flex items-center gap-2.5 text-left group shrink-0"
+            className="flex items-center gap-2.5 shrink-0"
           >
-            <div className="w-10 h-10 rounded-xl bg-vermilion text-white flex items-center justify-center shadow-sm group-hover:bg-vermilion-hover transition-colors">
-              <Store className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-lg font-bold tracking-tight text-ink">SomJing</span>
-                <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-sand text-mutedInk">
-                  สมจริง
-                </span>
-              </div>
-              <p className="text-[11px] text-mutedInk hidden sm:block">
-                Verified Collectibles &amp; Escrow Auction
-              </p>
-            </div>
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 32 32"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <rect width="32" height="32" fill="#111111" />
+              <path
+                d="M9 19.5L13.8 11H18.5L13.7 19.5H9ZM14.8 21L19.6 12.5H23L18.2 21H14.8Z"
+                fill="#FFFFFF"
+              />
+            </svg>
+            <span className="font-display text-2xl tracking-wide text-ink leading-none pt-0.5">
+              SOMJING
+            </span>
           </button>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-1 overflow-x-auto">
+          {/* Center: Nav Links with 2px solid #111111 bottom underline on active */}
+          <nav className="hidden lg:flex items-center justify-center gap-6 h-full">
             {navItems.map((item) => {
               const active = activeTab === item.id;
               return (
@@ -158,99 +188,133 @@ export const Navbar: React.FC = () => {
                   key={item.id}
                   type="button"
                   onClick={() => handleSelectTab(item.id)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${
-                    active
-                      ? 'bg-ink text-white'
-                      : 'text-mutedInk hover:text-ink hover:bg-sand'
+                  className={`relative h-full inline-flex items-center gap-1.5 text-base font-medium transition-colors whitespace-nowrap ${
+                    active ? 'text-ink' : 'text-ink/80 hover:text-ink'
                   }`}
                 >
-                  {item.icon}
                   <span>{item.label}</span>
                   {typeof item.badge === 'number' && item.badge > 0 && (
-                    <span
-                      className={`ml-0.5 px-1.5 py-0.2 rounded-full text-[11px] font-mono font-semibold ${
-                        active ? 'bg-vermilion text-white' : 'bg-vermilion-soft text-vermilion'
-                      }`}
-                    >
-                      {item.badge}
+                    <span className="font-mono text-[11px] font-semibold text-mute">
+                      ({item.badge})
                     </span>
+                  )}
+                  {active && (
+                    <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-ink" />
                   )}
                 </button>
               );
             })}
           </nav>
 
-          {/* Account Controls */}
+          {/* Right: Circular Utility Icon Buttons */}
           <div className="flex items-center gap-2 shrink-0">
-            {currentUser ? (
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 bg-sand border border-stoneBorder rounded-xl px-3 py-1.5">
-                  <div className="w-7 h-7 rounded-lg bg-ink text-white text-xs font-bold flex items-center justify-center">
-                    {currentUser.avatarInitials}
-                  </div>
-                  <div className="hidden sm:block text-left leading-tight">
-                    <p className="text-xs font-semibold text-ink max-w-[130px] truncate">
-                      {currentUser.name}
-                    </p>
-                    <p className="text-[11px] text-mutedInk uppercase font-mono">
-                      {currentUser.role}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={logoutUser}
-                  className="p-2 rounded-xl border border-stoneBorder text-mutedInk hover:text-ink hover:bg-sand transition-colors"
-                  title="ออกจากระบบ"
-                  aria-label="ออกจากระบบ"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setAuthModalOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-vermilion hover:bg-vermilion-hover text-white text-sm font-semibold transition-colors"
-              >
-                <LogIn className="w-4 h-4" />
-                <span>เข้าสู่ระบบ / สมัครสมาชิก</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => handleSelectTab('escrow')}
+              className="btn-icon-circular relative"
+              title="Escrow Orders"
+              aria-label="Escrow Orders"
+            >
+              <ShoppingBag className="w-5 h-5" />
+              {activeEscrowCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-ink text-canvas text-[10px] font-mono flex items-center justify-center">
+                  {activeEscrowCount}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSelectTab('admin')}
+              className="btn-icon-circular relative hidden sm:inline-flex"
+              title="Admin Console"
+              aria-label="Admin Console"
+            >
+              <Shield className="w-5 h-5" />
+              {adminBadgeCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-sale text-canvas text-[10px] font-mono flex items-center justify-center">
+                  {adminBadgeCount}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setAuthModalOpen(true)}
+              className="btn-icon-circular"
+              title="บัญชีผู้ใช้"
+              aria-label="บัญชีผู้ใช้"
+            >
+              <UserIcon className="w-5 h-5" />
+            </button>
           </div>
         </div>
-
-        {/* Mobile / Tablet Scrollable Navigation */}
-        <nav className="flex lg:hidden items-center gap-1.5 pb-3 overflow-x-auto">
-          {navItems.map((item) => {
-            const active = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => handleSelectTab(item.id)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
-                  active
-                    ? 'bg-ink text-white'
-                    : 'bg-sand text-mutedInk hover:text-ink'
-                }`}
-              >
-                {item.icon}
-                <span>{item.label}</span>
-                {typeof item.badge === 'number' && item.badge > 0 && (
-                  <span
-                    className={`px-1.5 rounded-full text-[10px] font-mono font-semibold ${
-                      active ? 'bg-vermilion text-white' : 'bg-white text-vermilion'
-                    }`}
-                  >
-                    {item.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
       </div>
+
+      {/* Mobile Full-Height Left Slide Drawer */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          <div
+            className="fixed inset-0 bg-ink/40"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <aside className="relative z-10 w-80 max-w-[85vw] bg-canvas h-full flex flex-col justify-between p-6 overflow-y-auto">
+            <div>
+              <div className="flex items-center justify-between pb-6 border-b border-hairline">
+                <span className="font-display text-2xl text-ink">SOMJING</span>
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="btn-icon-circular"
+                  aria-label="ปิดเมนู"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <nav className="divide-y divide-hairline-soft">
+                {navItems.map((item) => {
+                  const active = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleSelectTab(item.id)}
+                      className={`w-full py-5 flex items-center justify-between text-left text-base font-medium ${
+                        active ? 'text-ink font-semibold underline underline-offset-4' : 'text-charcoal'
+                      }`}
+                    >
+                      <span>{item.label}</span>
+                      {typeof item.badge === 'number' && item.badge > 0 && (
+                        <span className="font-mono text-xs text-mute">({item.badge})</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            <div className="pt-6 border-t border-hairline space-y-3">
+              <p className="text-xs text-mute font-medium">Demo Role Switcher</p>
+              <div className="flex flex-wrap gap-2">
+                {roles.map((r) => (
+                  <button
+                    key={r.role}
+                    type="button"
+                    onClick={() => {
+                      switchDemoRole(r.role);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={
+                      currentUser?.role === r.role ? 'filter-chip-active' : 'filter-chip'
+                    }
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </aside>
+        </div>
+      )}
     </header>
   );
 };

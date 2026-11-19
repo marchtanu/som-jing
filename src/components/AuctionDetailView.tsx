@@ -1,14 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import {
   ArrowLeft,
-  BadgeCheck,
-  Clock,
+  ChevronDown,
+  ChevronUp,
   Gavel,
-  History,
-  Lock,
   ShieldCheck,
-  ShoppingBag,
-  UserCheck,
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { CATEGORY_LABELS, formatTHB, formatThaiDateTime, getCountdownParts } from '../utils/format';
@@ -31,6 +27,7 @@ export const AuctionDetailView: React.FC = () => {
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [customBid, setCustomBid] = useState('');
   const [bidError, setBidError] = useState<string | null>(null);
+  const [openSection, setOpenSection] = useState<'auth' | 'bids' | 'escrow' | null>('auth');
 
   useEffect(() => {
     const timer = setInterval(() => setNowMs(Date.now()), 1000);
@@ -77,314 +74,310 @@ export const AuctionDetailView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <button
-        type="button"
-        onClick={() => setSelectedProductId(null)}
-        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-paper border border-stoneBorder text-sm font-semibold text-ink hover:bg-sand transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        <span>กลับหน้ารวมสินค้า</span>
-      </button>
+    <div className="space-y-8">
+      {/* Top Breadcrumb Bar */}
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setSelectedProductId(null)}
+          className="btn-icon-circular shrink-0"
+          aria-label="กลับหน้ารวมสินค้า"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <p className="text-sm font-medium text-mute truncate">
+          Explore &amp; Auctions / {CATEGORY_LABELS[product.category]} /{' '}
+          <span className="text-ink">{product.title}</span>
+        </p>
+      </div>
 
-      <div className="grid lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Images & Certificate */}
-        <div className="lg:col-span-6 space-y-4">
-          <div className="rounded-2xl bg-paper border border-stoneBorder overflow-hidden aspect-[4/3]">
-            <SafeImage
-              src={product.images[selectedImageIdx] || product.images[0]}
-              alt={product.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
-
-          {product.images.length > 1 && (
-            <div className="flex gap-3">
+      <div className="grid lg:grid-cols-12 gap-10 items-start">
+        {/* Left Column: Vertical Thumbnail Rail + 1:1 Studio Image on #f5f5f5 */}
+        <div className="lg:col-span-7 flex flex-col-reverse sm:flex-row gap-3">
+          {product.images.length > 0 && (
+            <div className="flex sm:flex-col gap-2 overflow-x-auto sm:w-16 shrink-0">
               {product.images.map((img, idx) => (
                 <button
                   key={idx}
                   type="button"
                   onClick={() => setSelectedImageIdx(idx)}
-                  className={`w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${
-                    selectedImageIdx === idx
-                      ? 'border-vermilion'
-                      : 'border-stoneBorder opacity-70 hover:opacity-100'
+                  className={`w-16 h-16 bg-soft-cloud rounded-none overflow-hidden border transition-colors shrink-0 ${
+                    selectedImageIdx === idx ? 'border-ink' : 'border-transparent opacity-70 hover:opacity-100'
                   }`}
                 >
-                  <SafeImage src={img} alt={`${product.title} ${idx + 1}`} className="w-full h-full object-cover" />
+                  <SafeImage
+                    src={img}
+                    alt={`${product.title} ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                  />
                 </button>
               ))}
             </div>
           )}
 
-          {/* Authenticity Verification Details */}
-          <div className="rounded-2xl bg-paper border border-stoneBorder p-5 space-y-3">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <h2 className="text-base font-bold text-ink inline-flex items-center gap-2">
-                <BadgeCheck className="w-5 h-5 text-emeraldSeal" />
-                <span>สถานะการรับรองความแท้ (Authenticity)</span>
-              </h2>
+          <div className="flex-1 aspect-square bg-soft-cloud rounded-none overflow-hidden relative">
+            <SafeImage
+              src={product.images[selectedImageIdx] || product.images[0]}
+              alt={product.title}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute top-4 left-4">
               <VerificationBadge
                 status={product.verificationStatus}
                 certificateId={product.certificateId}
               />
             </div>
-
-            {product.verificationStatus === 'verified' ? (
-              <div className="rounded-xl bg-emeraldSeal-soft border border-emeraldSeal/20 p-4 text-xs space-y-1.5 text-ink">
-                <p>
-                  <span className="font-semibold">เลขที่ใบรับรอง:</span>{' '}
-                  <span className="font-mono font-bold text-emeraldSeal">
-                    {product.certificateId}
-                  </span>
-                </p>
-                <p>
-                  <span className="font-semibold">ผู้ตรวจสอบ:</span> {product.verifiedBy}
-                </p>
-                <p>
-                  <span className="font-semibold">รหัสสินค้า / Serial:</span>{' '}
-                  <span className="font-mono">{product.serialNumber || '-'}</span>
-                </p>
-                {product.authenticityNotes && (
-                  <p className="text-emeraldSeal font-medium pt-1">
-                    หมายเหตุผู้เชี่ยวชาญ: {product.authenticityNotes}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="rounded-xl bg-sand p-4 text-xs text-mutedInk flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-ink">
-                    {product.verificationStatus === 'pending'
-                      ? 'รายการนี้อยู่ระหว่างรอทีมแอดมินตรวจสอบความแท้'
-                      : 'สินค้านี้ยังไม่ได้รับการตรวจรับรองความแท้ (Verified Badge)'}
-                  </p>
-                  <p className="mt-0.5">
-                    รหัสซีเรียล: <span className="font-mono">{product.serialNumber || 'ไม่ระบุ'}</span>
-                  </p>
-                </div>
-                {product.verificationStatus === 'unverified' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedProductId(null);
-                      setActiveTab('verify');
-                    }}
-                    className="px-3 py-1.5 rounded-lg bg-ink text-white font-semibold shrink-0 hover:bg-ink/90"
-                  >
-                    ส่งขอ Verify
-                  </button>
-                )}
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Right Column: Bidding / Purchase & History */}
-        <div className="lg:col-span-6 space-y-5">
-          <div className="rounded-2xl bg-paper border border-stoneBorder p-6 space-y-5">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="px-2.5 py-1 rounded-full bg-sand text-xs font-semibold text-mutedInk">
-                  {CATEGORY_LABELS[product.category]}
+        {/* Right Column: PDP Pricing, Bidding & Stacked Hairline Disclosures */}
+        <div className="lg:col-span-5 space-y-6">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-mute">
+              {CATEGORY_LABELS[product.category]} · {product.condition}
+            </p>
+            <h1 className="text-2xl sm:text-[32px] font-medium leading-[1.2] text-ink">
+              {product.title}
+            </h1>
+            <p className="text-sm font-medium text-mute">Seller: {product.sellerName}</p>
+          </div>
+
+          {/* Price & Countdown Row */}
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-mute uppercase tracking-wide">
+              {product.saleType === 'auction' ? 'ราคาประมูลปัจจุบัน (Current Bid)' : 'ราคาขายสุทธิ'}
+            </p>
+            <div className="flex items-baseline flex-wrap gap-4">
+              <span className="text-2xl font-medium text-ink font-mono tabular-nums">
+                {formatTHB(product.currentPrice)}
+              </span>
+              {product.saleType === 'auction' && (
+                <span className="text-base font-medium text-sale font-mono tabular-nums">
+                  {countdown.formatted} ({product.bids.length} บิด)
                 </span>
-                <span className="text-xs font-medium text-mutedInk">
-                  สภาพ: <strong className="text-ink">{product.condition}</strong>
-                </span>
+              )}
+            </div>
+            {product.saleType === 'auction' && (
+              <p className="text-xs text-mute">
+                ราคาเริ่มต้น {formatTHB(product.startPrice)} · เพิ่มขั้นต่ำ{' '}
+                <span className="font-mono text-ink">+{formatTHB(product.minBidIncrement)}</span>
+              </p>
+            )}
+          </div>
+
+          <p className="text-base text-charcoal leading-relaxed">{product.description}</p>
+
+          {/* Bidding / Checkout Action Controls */}
+          {product.status === 'sold' ? (
+            <div className="bg-soft-cloud p-5 text-sm font-medium text-success">
+              รายการนี้ถูกชำระเงินเข้าบัญชีพักเงิน SomJing Escrow เรียบร้อยแล้ว
+            </div>
+          ) : product.saleType === 'auction' ? (
+            <div className="space-y-4">
+              {bidError && (
+                <p className="text-sm font-medium text-sale">{bidError}</p>
+              )}
+
+              {/* Quick-Bid Pill Chips */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-ink">เลือกเพิ่มราคาประมูลด่วน</p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    product.minBidIncrement,
+                    product.minBidIncrement * 2,
+                    product.minBidIncrement * 4,
+                  ].map((inc) => {
+                    const targetAmount = product.currentPrice + inc;
+                    return (
+                      <button
+                        key={inc}
+                        type="button"
+                        disabled={countdown.ended}
+                        onClick={() => handlePlaceBid(targetAmount)}
+                        className="filter-chip hover:border-ink disabled:opacity-40 font-mono"
+                      >
+                        +{formatTHB(inc)} ({formatTHB(targetAmount)})
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <h1 className="text-xl sm:text-2xl font-bold text-ink leading-snug">
-                {product.title}
-              </h1>
-              <div className="flex items-center gap-2 text-xs text-mutedInk">
-                <UserCheck className="w-4 h-4 text-ink" />
-                <span>ผู้ขาย: <strong className="text-ink">{product.sellerName}</strong></span>
+
+              {/* Custom Bid & Primary CTA */}
+              <div className="space-y-3">
+                <input
+                  type="number"
+                  min={minNextBid}
+                  step={100}
+                  value={customBid}
+                  onChange={(e) => setCustomBid(e.target.value)}
+                  className="hairline-input w-full font-mono text-base"
+                />
+                <button
+                  type="button"
+                  disabled={countdown.ended}
+                  onClick={() => handlePlaceBid(Number(customBid))}
+                  className="btn-primary w-full"
+                >
+                  <Gavel className="w-4 h-4" />
+                  <span>บิดประมูลทันที</span>
+                </button>
+                {product.buyNowPrice && (
+                  <button
+                    type="button"
+                    onClick={() => handleEscrowCheckout(product.buyNowPrice!, 'direct')}
+                    className="btn-secondary w-full"
+                  >
+                    ซื้อทันที {formatTHB(product.buyNowPrice)} (Escrow)
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleEscrowCheckout(product.currentPrice, 'auction')}
+                  className="btn-secondary w-full"
+                >
+                  จำลองชนะประมูล &amp; ชำระ Escrow
+                </button>
               </div>
             </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => handleEscrowCheckout(product.currentPrice, 'direct')}
+              className="btn-primary w-full"
+            >
+              ซื้อสินค้า &amp; พักเงิน Escrow ({formatTHB(product.currentPrice)})
+            </button>
+          )}
 
-            <p className="text-sm text-mutedInk leading-relaxed">{product.description}</p>
-
-            {/* Price & Countdown Panel */}
-            <div className="rounded-2xl bg-ivory border border-stoneBorder p-5 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-                <div>
-                  <p className="text-xs text-mutedInk font-medium">
-                    {product.saleType === 'auction' ? 'ราคาประมูลปัจจุบัน' : 'ราคาขายทันที'}
-                  </p>
-                  <p className="text-3xl font-bold font-mono text-vermilion tabular-nums mt-0.5">
-                    {formatTHB(product.currentPrice)}
-                  </p>
-                  {product.saleType === 'auction' && (
-                    <p className="text-xs text-mutedInk mt-1">
-                      ราคาเริ่มต้น {formatTHB(product.startPrice)} • บิดเพิ่มขั้นต่ำ{' '}
-                      <span className="font-mono font-semibold text-ink">
-                        +{formatTHB(product.minBidIncrement)}
-                      </span>
-                    </p>
+          {/* Stacked pdp-disclosure-row Accordions (py-6, 1px solid #cacacb hairline below) */}
+          <div className="border-t border-hairline">
+            {/* Row 1: Authenticity Certificate */}
+            <div className="border-b border-hairline">
+              <button
+                type="button"
+                onClick={() => setOpenSection(openSection === 'auth' ? null : 'auth')}
+                className="w-full py-6 flex items-center justify-between text-left text-base font-medium text-ink"
+              >
+                <span>การรับรองความแท้ (SomJing Verification)</span>
+                {openSection === 'auth' ? (
+                  <ChevronUp className="w-5 h-5 text-ink" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-ink" />
+                )}
+              </button>
+              {openSection === 'auth' && (
+                <div className="pb-6 text-sm text-charcoal space-y-2">
+                  {product.verificationStatus === 'verified' ? (
+                    <>
+                      <p className="text-success font-medium inline-flex items-center gap-1.5">
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>ผ่านการตรวจสอบความแท้แล้ว ({product.certificateId})</span>
+                      </p>
+                      <p>ผู้ตรวจสอบ: {product.verifiedBy}</p>
+                      <p>
+                        Serial Number:{' '}
+                        <span className="font-mono text-ink">{product.serialNumber || '-'}</span>
+                      </p>
+                      {product.authenticityNotes && <p>{product.authenticityNotes}</p>}
+                    </>
+                  ) : (
+                    <div className="space-y-3">
+                      <p>
+                        สถานะปัจจุบัน:{' '}
+                        <strong className="text-ink">
+                          {product.verificationStatus === 'pending'
+                            ? 'อยู่ระหว่างรอแอดมินตรวจสอบ'
+                            : 'ยังไม่ได้ส่งขอรับรองความแท้'}
+                        </strong>
+                      </p>
+                      {product.verificationStatus === 'unverified' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedProductId(null);
+                            setActiveTab('verify');
+                          }}
+                          className="text-sm font-medium text-ink underline underline-offset-4"
+                        >
+                          ส่งขอ Verify รายการนี้
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
+              )}
+            </div>
 
-                {product.saleType === 'auction' && (
-                  <div className="sm:text-right rounded-xl bg-ink text-ivory p-3.5">
-                    <p className="text-[11px] text-ivory/75 inline-flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-vermilion" />
-                      <span>เวลานับถอยหลังปิดประมูล</span>
-                    </p>
-                    <p className="text-xl font-bold font-mono tabular-nums mt-0.5">
-                      {countdown.formatted}
-                    </p>
+            {/* Row 2: Bid History */}
+            {product.saleType === 'auction' && (
+              <div className="border-b border-hairline">
+                <button
+                  type="button"
+                  onClick={() => setOpenSection(openSection === 'bids' ? null : 'bids')}
+                  className="w-full py-6 flex items-center justify-between text-left text-base font-medium text-ink"
+                >
+                  <span>ประวัติการเสนอราคา ({product.bids.length})</span>
+                  {openSection === 'bids' ? (
+                    <ChevronUp className="w-5 h-5 text-ink" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-ink" />
+                  )}
+                </button>
+                {openSection === 'bids' && (
+                  <div className="pb-6 space-y-2.5 text-sm">
+                    {product.bids.length === 0 ? (
+                      <p className="text-mute">ยังไม่มีผู้เสนอราคา — เป็นคนแรกที่เปิดบิด</p>
+                    ) : (
+                      product.bids.map((bid, idx) => (
+                        <div key={bid.id} className="flex items-center justify-between gap-2">
+                          <div>
+                            <span className="font-medium text-ink">{bid.bidderName}</span>
+                            {idx === 0 && (
+                              <span className="ml-2 text-xs font-medium text-success">
+                                Leading
+                              </span>
+                            )}
+                            <p className="text-xs text-mute">
+                              {formatThaiDateTime(bid.createdAt)}
+                            </p>
+                          </div>
+                          <span className="font-mono font-medium text-ink tabular-nums">
+                            {formatTHB(bid.amount)}
+                          </span>
+                        </div>
+                      ))
+                    )}
                   </div>
                 )}
               </div>
+            )}
 
-              {product.status === 'sold' ? (
-                <div className="rounded-xl bg-emeraldSeal-soft border border-emeraldSeal/25 p-4 text-sm font-semibold text-emeraldSeal text-center">
-                  สินค้านี้ถูกซื้อและพักเงินในระบบ Escrow เรียบร้อยแล้ว
-                </div>
-              ) : product.saleType === 'auction' ? (
-                <div className="space-y-3 pt-2 border-t border-stoneBorder">
-                  {bidError && (
-                    <div className="rounded-xl bg-rose-50 border border-rose-200 px-3 py-2 text-xs font-medium text-rose-700">
-                      {bidError}
-                    </div>
-                  )}
-
-                  {/* Quick Bid Chips */}
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      product.minBidIncrement,
-                      product.minBidIncrement * 2,
-                      product.minBidIncrement * 4,
-                    ].map((inc) => {
-                      const targetAmount = product.currentPrice + inc;
-                      return (
-                        <button
-                          key={inc}
-                          type="button"
-                          disabled={countdown.ended}
-                          onClick={() => handlePlaceBid(targetAmount)}
-                          className="px-3 py-2 rounded-xl bg-paper border border-stoneBorder hover:border-vermilion hover:text-vermilion text-xs font-mono font-semibold transition-colors disabled:opacity-50"
-                        >
-                          บิด +{formatTHB(inc)} ({formatTHB(targetAmount)})
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Custom Bid Form */}
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      min={minNextBid}
-                      step={100}
-                      value={customBid}
-                      onChange={(e) => setCustomBid(e.target.value)}
-                      className="flex-1 px-3.5 py-2.5 rounded-xl border border-stoneBorder bg-paper font-mono text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-vermilion/25 focus:border-vermilion"
-                    />
-                    <button
-                      type="button"
-                      disabled={countdown.ended}
-                      onClick={() => handlePlaceBid(Number(customBid))}
-                      className="px-5 py-2.5 rounded-xl bg-vermilion hover:bg-vermilion-hover disabled:opacity-50 text-white text-sm font-semibold transition-colors inline-flex items-center gap-2 shrink-0"
-                    >
-                      <Gavel className="w-4 h-4" />
-                      <span>ปุ่มบิดประมูล</span>
-                    </button>
-                  </div>
-
-                  {/* Buy Now / Demo Checkout Button */}
-                  <div className="pt-2 flex flex-col sm:flex-row gap-2">
-                    {product.buyNowPrice && (
-                      <button
-                        type="button"
-                        onClick={() => handleEscrowCheckout(product.buyNowPrice!, 'direct')}
-                        className="flex-1 py-2.5 px-4 rounded-xl bg-ink hover:bg-ink/90 text-white text-xs font-semibold transition-colors inline-flex items-center justify-center gap-2"
-                      >
-                        <ShoppingBag className="w-4 h-4" />
-                        <span>ซื้อทันที {formatTHB(product.buyNowPrice)} (ผ่าน Escrow)</span>
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => handleEscrowCheckout(product.currentPrice, 'auction')}
-                      className="flex-1 py-2.5 px-4 rounded-xl bg-escrowBlue-soft border border-escrowBlue/25 hover:bg-escrowBlue hover:text-white text-escrowBlue text-xs font-semibold transition-colors inline-flex items-center justify-center gap-2"
-                    >
-                      <Lock className="w-4 h-4" />
-                      <span>จำลองชนะประมูล &amp; ชำระ Escrow</span>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={() => handleEscrowCheckout(product.currentPrice, 'direct')}
-                    className="w-full py-3 rounded-xl bg-vermilion hover:bg-vermilion-hover text-white text-sm font-semibold transition-colors inline-flex items-center justify-center gap-2"
-                  >
-                    <Lock className="w-4 h-4" />
-                    <span>ซื้อสินค้า &amp; ชำระเงินเข้า Escrow ({formatTHB(product.currentPrice)})</span>
-                  </button>
+            {/* Row 3: Escrow Protection */}
+            <div className="border-b border-hairline">
+              <button
+                type="button"
+                onClick={() => setOpenSection(openSection === 'escrow' ? null : 'escrow')}
+                className="w-full py-6 flex items-center justify-between text-left text-base font-medium text-ink"
+              >
+                <span>ระบบพักเงิน Escrow &amp; การจัดส่ง</span>
+                {openSection === 'escrow' ? (
+                  <ChevronUp className="w-5 h-5 text-ink" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-ink" />
+                )}
+              </button>
+              {openSection === 'escrow' && (
+                <div className="pb-6 text-sm text-charcoal space-y-2 leading-relaxed">
+                  <p>
+                    1. ชำระเงินเข้าบัญชีพักเงินตัวกลาง SomJing Escrow (ค่าบริการคุ้มครอง 2%)
+                  </p>
+                  <p>2. ผู้ขายจัดส่งสินค้าพร้อมแนบเลขพัสดุ</p>
+                  <p>3. ผู้ซื้อตรวจรับสินค้าและกดยืนยันรับของ จึงจะปล่อยเงินให้ผู้ขาย</p>
                 </div>
               )}
-            </div>
-
-            {/* Escrow Guarantee Summary */}
-            <div className="rounded-xl bg-escrowBlue-soft/70 border border-escrowBlue/15 p-3.5 flex items-center gap-3 text-xs text-ink">
-              <ShieldCheck className="w-5 h-5 text-escrowBlue shrink-0" />
-              <span>
-                ทุกคำสั่งซื้อคุ้มครองด้วยระบบ <strong className="text-escrowBlue">SomJing Escrow</strong>{' '}
-                (พักเงิน → จัดส่ง → ยืนยันรับของ → ปล่อยเงิน)
-              </span>
             </div>
           </div>
-
-          {/* Bid History */}
-          {product.saleType === 'auction' && (
-            <div className="rounded-2xl bg-paper border border-stoneBorder p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-bold text-ink inline-flex items-center gap-2">
-                  <History className="w-4 h-4 text-vermilion" />
-                  <span>ประวัติการเสนอราคา ({product.bids.length} ครั้ง)</span>
-                </h2>
-                <span className="text-xs text-mutedInk">อัปเดตแบบ Real-time</span>
-              </div>
-
-              {product.bids.length === 0 ? (
-                <p className="text-xs text-mutedInk py-4 text-center bg-ivory rounded-xl">
-                  ยังไม่มีผู้เสนอราคา — เป็นคนแรกที่เปิดบิดรายการนี้!
-                </p>
-              ) : (
-                <div className="divide-y divide-stoneBorder">
-                  {product.bids.map((bid, index) => (
-                    <div
-                      key={bid.id}
-                      className="py-2.5 flex items-center justify-between gap-2 text-xs"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <span
-                          className={`px-2 py-0.5 rounded-full font-semibold ${
-                            index === 0
-                              ? 'bg-vermilion-soft text-vermilion'
-                              : 'bg-sand text-mutedInk'
-                          }`}
-                        >
-                          {index === 0 ? 'นำสูงสุด' : `#${product.bids.length - index}`}
-                        </span>
-                        <span className="font-semibold text-ink">{bid.bidderName}</span>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-mono font-bold text-ink tabular-nums">
-                          {formatTHB(bid.amount)}
-                        </p>
-                        <p className="text-[11px] text-mutedInk">
-                          {formatThaiDateTime(bid.createdAt)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>

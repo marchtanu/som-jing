@@ -1,19 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
-  Clock,
-  Filter,
-  Gavel,
-  Lock,
   Search,
   ShieldCheck,
-  Sparkles,
-  Tag,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { Product, ProductCategory } from '../types';
 import { CATEGORY_LABELS, formatTHB, getCountdownParts } from '../utils/format';
-import { SafeImage, VerificationBadge } from './ui';
+import { SafeImage } from './ui';
+
+const SWATCH_PALETTES: Record<ProductCategory, string[]> = {
+  'art-toys': ['#111111', '#707072', '#beaffd'],
+  sneakers: ['#111111', '#d30005', '#f5f5f5'],
+  gadgets: ['#111111', '#9e9ea0', '#0a7281'],
+  watches: ['#111111', '#007d48', '#4c012d'],
+};
 
 export const CatalogView: React.FC = () => {
   const { products, setSelectedProductId, setActiveTab } = useStore();
@@ -22,6 +24,7 @@ export const CatalogView: React.FC = () => {
   const [saleFilter, setSaleFilter] = useState<'all' | 'auction' | 'fixed'>('all');
   const [onlyVerified, setOnlyVerified] = useState(false);
   const [sortBy, setSortBy] = useState<'ending-soon' | 'price-asc' | 'price-desc'>('ending-soon');
+  const [showFilters, setShowFilters] = useState(true);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
@@ -50,207 +53,240 @@ export const CatalogView: React.FC = () => {
   }, [products, searchQuery, selectedCategory, saleFilter, onlyVerified, sortBy]);
 
   const categories: { id: ProductCategory | 'all'; label: string }[] = [
-    { id: 'all', label: 'ทุกหมวดหมู่' },
+    { id: 'all', label: 'ทั้งหมด' },
     { id: 'art-toys', label: CATEGORY_LABELS['art-toys'] },
     { id: 'sneakers', label: CATEGORY_LABELS.sneakers },
     { id: 'gadgets', label: CATEGORY_LABELS.gadgets },
     { id: 'watches', label: CATEGORY_LABELS.watches },
   ];
 
-  const verifiedCount = products.filter((p) => p.verificationStatus === 'verified').length;
-  const activeAuctionsCount = products.filter(
-    (p) => p.saleType === 'auction' && p.status === 'active'
-  ).length;
+  const getCategoryCount = (id: ProductCategory | 'all') =>
+    id === 'all' ? products.length : products.filter((p) => p.category === id).length;
 
   return (
-    <div className="space-y-8">
-      {/* Editorial Hero */}
-      <section className="rounded-2xl bg-ink text-ivory p-6 sm:p-10 relative overflow-hidden">
-        <div className="relative z-10 grid lg:grid-cols-12 gap-8 items-center">
-          <div className="lg:col-span-7 space-y-4">
-            <h1 className="text-2xl sm:text-4xl font-bold tracking-tight leading-snug">
-              ตลาดกลางซื้อขายและประมูลของสะสมแรร์ การันตีของแท้ด้วย{' '}
-              <span className="text-vermilion">Verified Badge</span> และระบบพักเงิน{' '}
-              <span className="text-emerald-300">Escrow</span>
-            </h1>
-            <p className="text-sm sm:text-base text-ivory/80 max-w-2xl leading-relaxed">
-              SomJing (สมจริง) ช่วยให้นักสะสมประมูลสินค้าหายาก ลงประกาศตามหาสินค้าที่ต้องการ
-              (Wanted Listing) และทำธุรกรรมอย่างมั่นใจด้วยบัญชีพักเงินกลางจนกว่าผู้ซื้อจะยืนยันรับของ
-            </p>
-            <div className="flex flex-wrap gap-3 pt-1">
-              <button
-                type="button"
-                onClick={() => setActiveTab('wanted')}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-vermilion hover:bg-vermilion-hover text-white text-sm font-semibold transition-colors"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>เปิดกระดานตามหาสินค้า (Wanted)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('sell')}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-ivory text-sm font-semibold transition-colors"
-              >
-                <span>ลงขาย / เปิดประมูลสินค้า</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-3">
-            <div className="rounded-xl bg-white/10 border border-white/10 p-3.5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-emeraldSeal/20 text-emerald-300 flex items-center justify-center shrink-0">
-                <ShieldCheck className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-xs text-ivory/70">ผ่านการตรวจความแท้แล้ว</p>
-                <p className="text-base font-bold font-mono tabular-nums">
-                  {verifiedCount} รายการ Verified
-                </p>
-              </div>
-            </div>
-            <div className="rounded-xl bg-white/10 border border-white/10 p-3.5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-vermilion/25 text-orange-300 flex items-center justify-center shrink-0">
-                <Gavel className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-xs text-ivory/70">ห้องประมูลที่กำลังเปิดอยู่</p>
-                <p className="text-base font-bold font-mono tabular-nums">
-                  {activeAuctionsCount} Live Auctions
-                </p>
-              </div>
-            </div>
-            <div className="rounded-xl bg-white/10 border border-white/10 p-3.5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-escrowBlue/30 text-blue-300 flex items-center justify-center shrink-0">
-                <Lock className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-xs text-ivory/70">คุ้มครองทุกคำสั่งซื้อ</p>
-                <p className="text-base font-bold">พักเงิน → ส่ง → รับของ → ปล่อยเงิน</p>
-              </div>
-            </div>
+    <div className="space-y-12">
+      {/* Editorial Campaign Tile: Full-bleed image with towering Futura/Bebas Neue headline */}
+      <section className="relative w-full aspect-[4/5] sm:aspect-[16/7] bg-ink overflow-hidden rounded-none">
+        <SafeImage
+          src="https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=1600&q=85"
+          alt="SomJing Verified Archive Campaign"
+          className="w-full h-full object-cover opacity-80"
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(180deg, rgba(17,17,17,0.12) 0%, rgba(17,17,17,0.72) 100%)',
+          }}
+        />
+        <div className="absolute inset-x-0 bottom-0 p-6 sm:p-10 lg:p-12 flex flex-col items-start gap-4 max-w-4xl">
+          <h1 className="display-campaign text-[48px] sm:text-[64px] lg:text-[96px] text-canvas">
+            AUTHENTIC ONLY.
+            <br />
+            ESCROW PROTECTED.
+          </h1>
+          <p className="text-sm sm:text-base text-canvas/90 max-w-xl leading-relaxed">
+            ตลาดกลางซื้อขายและประมูลของสะสมแรร์ SomJing (สมจริง) ตรวจรับรองความแท้ด้วย Verified Badge
+            และพักเงินตัวกลาง 4 ขั้นตอนจนกว่าจะรับของจริง
+          </p>
+          <div className="flex flex-wrap gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => setActiveTab('wanted')}
+              className="btn-outline-on-image"
+            >
+              <span>เปิดกระดาน Wanted</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('sell')}
+              className="btn-outline-on-image"
+            >
+              <span>ลงขายสินค้า</span>
+            </button>
           </div>
         </div>
       </section>
 
-      {/* Search & Filter Toolbar */}
-      <section className="rounded-2xl bg-paper border border-stoneBorder p-4 sm:p-5 space-y-4">
-        <div className="flex flex-col md:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-mutedInk absolute left-3.5 top-3.5" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ค้นหาชื่อสินค้า รุ่น ซีเรียลนัมเบอร์ หรือเลข Certificate (เช่น KAWS, Leica, SJ-CERT)..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stoneBorder bg-ivory/70 text-sm focus:outline-none focus:ring-2 focus:ring-vermilion/25 focus:border-vermilion"
-            />
+      {/* PLP Sub-Nav Strip */}
+      <section className="space-y-6">
+        <div className="bg-canvas shadow-inset-hairline pb-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-mute">
+              SomJing / Rare Collectibles &amp; Live Auctions
+            </p>
+            <h2 className="text-[24px] sm:text-[32px] font-medium leading-[1.2] text-ink mt-1">
+              ALL COLLECTIBLES ({filteredProducts.length})
+            </h2>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={saleFilter}
-              onChange={(e) => setSaleFilter(e.target.value as 'all' | 'auction' | 'fixed')}
-              className="px-3 py-2.5 rounded-xl border border-stoneBorder bg-ivory/70 text-sm font-medium text-ink focus:outline-none focus:ring-2 focus:ring-vermilion/25"
-              aria-label="รูปแบบการขาย"
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Search Pill */}
+            <div className="relative w-full sm:w-72">
+              <Search className="w-4 h-4 text-ink absolute left-4 top-3 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search items, Cert ID..."
+                className="search-pill w-full pl-10 pr-4 text-sm"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowFilters((v) => !v)}
+              className="inline-flex items-center gap-2 text-base font-medium text-ink px-2 py-2 hover:text-charcoal"
             >
-              <option value="all">ทุกรูปแบบการขาย</option>
-              <option value="auction">ประมูลสด (Auction)</option>
-              <option value="fixed">ซื้อทันที (Fixed Price)</option>
-            </select>
+              <span>{showFilters ? 'Hide Filters' : 'Show Filters'}</span>
+              <SlidersHorizontal className="w-4 h-4" />
+            </button>
 
             <select
               value={sortBy}
               onChange={(e) =>
                 setSortBy(e.target.value as 'ending-soon' | 'price-asc' | 'price-desc')
               }
-              className="px-3 py-2.5 rounded-xl border border-stoneBorder bg-ivory/70 text-sm font-medium text-ink focus:outline-none focus:ring-2 focus:ring-vermilion/25"
-              aria-label="เรียงลำดับ"
+              aria-label="Sort By"
+              className="bg-canvas text-ink text-base font-medium border-none focus:outline-none cursor-pointer pr-2"
             >
-              <option value="ending-soon">ใกล้ปิดประมูลที่สุด</option>
-              <option value="price-asc">ราคา: ต่ำ → สูง</option>
-              <option value="price-desc">ราคา: สูง → ต่ำ</option>
+              <option value="ending-soon">Sort By: Ending Soon</option>
+              <option value="price-asc">Sort By: Price Low-High</option>
+              <option value="price-desc">Sort By: Price High-Low</option>
             </select>
-
-            <button
-              type="button"
-              onClick={() => setOnlyVerified((v) => !v)}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${
-                onlyVerified
-                  ? 'bg-emeraldSeal-soft border-emeraldSeal text-emeraldSeal'
-                  : 'bg-ivory/70 border-stoneBorder text-mutedInk hover:text-ink'
-              }`}
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Verified เท่านั้น</span>
-            </button>
           </div>
         </div>
 
-        {/* Category Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          <Filter className="w-4 h-4 text-mutedInk shrink-0 mr-1" />
-          {categories.map((cat) => {
-            const active = selectedCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-                  active
-                    ? 'bg-ink text-white'
-                    : 'bg-sand text-mutedInk hover:text-ink hover:bg-stoneBorder/50'
-                }`}
-              >
-                {cat.label}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Product Grid */}
-      {filteredProducts.length === 0 ? (
-        <div className="rounded-2xl bg-paper border border-stoneBorder p-12 text-center space-y-3">
-          <p className="text-base font-bold text-ink">ไม่พบสินค้าที่ตรงกับเงื่อนไขการค้นหา</p>
-          <p className="text-sm text-mutedInk">
-            ลองเปลี่ยนคำค้นหา หมวดหมู่ หรือสร้างประกาศตามหา (Wanted Listing) เพื่อให้ผู้ขายเสนอของให้คุณ
-          </p>
-          <div className="flex justify-center gap-3 pt-2">
+        {/* Mobile Quick Filter Chips */}
+        <div className="flex lg:hidden items-center gap-2 overflow-x-auto pb-1">
+          {categories.map((cat) => (
             <button
+              key={cat.id}
               type="button"
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedCategory('all');
-                setSaleFilter('all');
-                setOnlyVerified(false);
-              }}
-              className="px-4 py-2 rounded-xl border border-stoneBorder text-sm font-semibold text-ink hover:bg-sand"
+              onClick={() => setSelectedCategory(cat.id)}
+              className={selectedCategory === cat.id ? 'filter-chip-active' : 'filter-chip'}
             >
-              ล้างตัวกรอง
+              {cat.label}
             </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('wanted')}
-              className="px-4 py-2 rounded-xl bg-vermilion text-white text-sm font-semibold hover:bg-vermilion-hover"
-            >
-              ไปหน้า Wanted Listing
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {filteredProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              nowMs={nowMs}
-              onSelect={() => setSelectedProductId(product.id)}
-            />
           ))}
         </div>
-      )}
+
+        {/* Main PLP Layout: 220px Filter Sidebar + 3-up Product Grid (8px gutter) */}
+        <div className="flex flex-col lg:flex-row gap-8 items-start">
+          {showFilters && (
+            <aside className="hidden lg:block w-[220px] shrink-0 space-y-6">
+              {/* Category Group */}
+              <div className="pb-6 border-b border-hairline space-y-3">
+                <h3 className="text-base font-medium text-ink">หมวดหมู่สินค้า</h3>
+                <ul className="space-y-2.5 text-sm font-medium">
+                  {categories.map((cat) => {
+                    const active = selectedCategory === cat.id;
+                    return (
+                      <li key={cat.id}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCategory(cat.id)}
+                          className={`text-left transition-colors ${
+                            active
+                              ? 'text-ink underline underline-offset-4'
+                              : 'text-charcoal hover:text-ink'
+                          }`}
+                        >
+                          {cat.label}{' '}
+                          <span className="text-mute">({getCategoryCount(cat.id)})</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+
+              {/* Sale Mode Group */}
+              <div className="pb-6 border-b border-hairline space-y-3">
+                <h3 className="text-base font-medium text-ink">รูปแบบการขาย</h3>
+                <ul className="space-y-2.5 text-sm font-medium">
+                  {[
+                    { id: 'all' as const, label: 'ทั้งหมด' },
+                    { id: 'auction' as const, label: 'ประมูลสด (Live Auction)' },
+                    { id: 'fixed' as const, label: 'ซื้อทันที (Buy Now)' },
+                  ].map((mode) => (
+                    <li key={mode.id}>
+                      <button
+                        type="button"
+                        onClick={() => setSaleFilter(mode.id)}
+                        className={`text-left ${
+                          saleFilter === mode.id
+                            ? 'text-ink underline underline-offset-4'
+                            : 'text-charcoal hover:text-ink'
+                        }`}
+                      >
+                        {mode.label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Authenticity Group */}
+              <div className="pb-6 border-b border-hairline space-y-3">
+                <h3 className="text-base font-medium text-ink">การรับรองความแท้</h3>
+                <button
+                  type="button"
+                  onClick={() => setOnlyVerified((v) => !v)}
+                  className={onlyVerified ? 'filter-chip-active' : 'filter-chip'}
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Verified Only</span>
+                </button>
+              </div>
+            </aside>
+          )}
+
+          {/* 3-up Product Grid with 8px gutter (gap-2) */}
+          <div className="flex-1 w-full">
+            {filteredProducts.length === 0 ? (
+              <div className="bg-soft-cloud p-12 text-center space-y-4">
+                <p className="text-base font-medium text-ink">
+                  ไม่พบสินค้าที่ตรงกับตัวกรองในขณะนี้
+                </p>
+                <div className="flex flex-wrap justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setSelectedCategory('all');
+                      setSaleFilter('all');
+                      setOnlyVerified(false);
+                    }}
+                    className="btn-secondary"
+                  >
+                    ล้างตัวกรองทั้งหมด
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('wanted')}
+                    className="btn-primary"
+                  >
+                    สร้างประกาศ Wanted
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {filteredProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    nowMs={nowMs}
+                    onSelect={() => setSelectedProductId(product.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
     </div>
   );
 };
@@ -261,99 +297,88 @@ const ProductCard: React.FC<{
   onSelect: () => void;
 }> = ({ product, nowMs, onSelect }) => {
   const countdown = getCountdownParts(product.endTime, nowMs);
+  const swatches = SWATCH_PALETTES[product.category];
 
   return (
     <article
       onClick={onSelect}
-      className="group cursor-pointer rounded-2xl bg-paper border border-stoneBorder overflow-hidden flex flex-col transition-all hover:border-ink/40 hover:-translate-y-0.5"
+      className="group cursor-pointer bg-canvas rounded-none p-0 flex flex-col"
     >
-      <div className="relative aspect-[4/3] bg-sand overflow-hidden">
+      {/* 1:1 Full-bleed photo on #f5f5f5 soft-cloud stage */}
+      <div className="relative aspect-square w-full bg-soft-cloud overflow-hidden rounded-none">
         <SafeImage
           src={product.images[0]}
           alt={product.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          className="w-full h-full object-cover"
         />
 
-        {/* Top Left Sale Mode & Timer */}
-        <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
-          {product.saleType === 'auction' ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-ink/85 backdrop-blur-sm text-white px-2.5 py-1 text-[11px] font-mono font-semibold tabular-nums">
-              <Clock className="w-3 h-3 text-vermilion" />
-              {countdown.formatted}
+        {/* Promo Badge Top-Left */}
+        <div className="absolute top-3 left-3">
+          {product.verificationStatus === 'verified' ? (
+            <span className="badge-promo">
+              <ShieldCheck className="w-3.5 h-3.5 text-success" />
+              <span>SomJing Verified</span>
             </span>
+          ) : product.verificationStatus === 'pending' ? (
+            <span className="badge-promo">Pending Verify</span>
           ) : (
-            <span className="inline-flex items-center gap-1 rounded-full bg-ink/85 backdrop-blur-sm text-white px-2.5 py-1 text-[11px] font-semibold">
-              <Tag className="w-3 h-3 text-emerald-300" />
-              ซื้อทันที
-            </span>
+            <span className="badge-promo">Just In</span>
           )}
         </div>
 
-        {/* Top Right Sold overlay */}
         {product.status === 'sold' && (
-          <div className="absolute inset-0 bg-ink/60 flex items-center justify-center">
-            <span className="px-3.5 py-1.5 rounded-full bg-white text-ink text-xs font-bold">
-              ชำระเข้า Escrow แล้ว
-            </span>
+          <div className="absolute inset-0 bg-ink/55 flex items-center justify-center">
+            <span className="badge-promo">Escrow Locked</span>
           </div>
         )}
       </div>
 
-      <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <span className="text-[11px] font-semibold text-mutedInk">
-              {CATEGORY_LABELS[product.category]}
-            </span>
-            <VerificationBadge
-              status={product.verificationStatus}
-              certificateId={product.certificateId}
-              compact
-            />
+      {/* Zero card horizontal padding; 8px vertical spacing between metadata rows */}
+      <div className="pt-3 pb-8 space-y-2">
+        {/* Swatch Dots Row */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            {swatches.map((hex, i) => (
+              <span
+                key={hex + i}
+                className={`w-3 h-3 rounded-full inline-block ${
+                  i === 0
+                    ? 'ring-2 ring-ink ring-offset-2 ring-offset-canvas'
+                    : 'border border-hairline'
+                }`}
+                style={{ backgroundColor: hex }}
+              />
+            ))}
           </div>
-
-          <h3 className="text-sm font-bold text-ink leading-snug line-clamp-2 group-hover:text-vermilion transition-colors">
-            {product.title}
-          </h3>
+          {product.verificationStatus === 'verified' && (
+            <span className="text-xs font-medium text-success font-mono">
+              {product.certificateId}
+            </span>
+          )}
         </div>
 
-        <div className="pt-3 border-t border-stoneBorder space-y-3">
-          <div className="flex items-end justify-between gap-2">
-            <div>
-              <p className="text-[11px] text-mutedInk">
-                {product.saleType === 'auction' ? 'ราคาประมูลปัจจุบัน' : 'ราคาขายสุทธิ'}
-              </p>
-              <p className="text-lg font-bold font-mono text-ink tabular-nums">
-                {formatTHB(product.currentPrice)}
-              </p>
-            </div>
-            {product.saleType === 'auction' && (
-              <span className="text-xs font-medium text-mutedInk font-mono">
-                {product.bids.length} บิด
-              </span>
-            )}
-          </div>
+        {/* Title */}
+        <h3 className="text-base font-medium text-ink leading-[1.5] line-clamp-2">
+          {product.title}
+        </h3>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect();
-            }}
-            className="w-full py-2 rounded-xl bg-sand hover:bg-ink hover:text-white text-ink text-xs font-semibold transition-colors inline-flex items-center justify-center gap-1.5"
-          >
-            {product.saleType === 'auction' ? (
-              <>
-                <Gavel className="w-3.5 h-3.5" />
-                <span>ดูรายละเอียด &amp; บิดประมูล</span>
-              </>
-            ) : (
-              <>
-                <Lock className="w-3.5 h-3.5" />
-                <span>ดูรายละเอียด &amp; ซื้อผ่าน Escrow</span>
-              </>
-            )}
-          </button>
+        {/* Subtitle */}
+        <p className="text-sm font-medium text-mute leading-[1.5]">
+          {CATEGORY_LABELS[product.category]} · {product.condition}
+        </p>
+
+        {/* Price + Inline Sale/Auction Countdown (no badge background) */}
+        <div className="flex items-baseline flex-wrap gap-x-3 gap-y-1 pt-0.5">
+          <span className="text-base font-medium text-ink font-mono tabular-nums">
+            {formatTHB(product.currentPrice)}
+          </span>
+          {product.saleType === 'auction' ? (
+            <span className="text-sm font-medium text-sale font-mono tabular-nums">
+              {countdown.formatted} · {product.bids.length} bids
+            </span>
+          ) : (
+            <span className="text-sm font-medium text-mute">Buy Now</span>
+          )}
         </div>
       </div>
     </article>

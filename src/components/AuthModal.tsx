@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Mail, Phone, UserPlus, User as UserIcon, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { UserRole } from '../types';
 
@@ -40,33 +40,31 @@ export const AuthModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 backdrop-blur-sm p-4">
-      <div className="bg-paper border border-stoneBorder rounded-2xl max-w-md w-full shadow-elevated overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stoneBorder bg-sand/50">
-          <h2 className="text-lg font-bold text-ink">
-            {mode === 'login' ? 'เข้าสู่ระบบ SomJing' : 'สมัครสมาชิกใหม่'}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4">
+      <div className="bg-canvas border border-hairline rounded-none max-w-md w-full overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-hairline">
+          <h2 className="text-2xl font-medium text-ink leading-[1.2]">
+            {mode === 'login' ? 'Sign In to SomJing' : 'Join SomJing'}
           </h2>
           <button
             type="button"
             onClick={() => setAuthModalOpen(false)}
-            className="p-1.5 rounded-lg text-mutedInk hover:text-ink hover:bg-sand"
+            className="btn-icon-circular"
             aria-label="ปิดหน้าต่าง"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6">
-          <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-sand mb-5">
+        <div className="p-6 space-y-5">
+          <div className="flex gap-2">
             <button
               type="button"
               onClick={() => {
                 setMode('login');
                 setError(null);
               }}
-              className={`py-2 rounded-lg text-sm font-semibold transition-colors ${
-                mode === 'login' ? 'bg-paper text-ink shadow-sm' : 'text-mutedInk hover:text-ink'
-              }`}
+              className={mode === 'login' ? 'filter-chip-active flex-1 justify-center' : 'filter-chip flex-1 justify-center'}
             >
               เข้าสู่ระบบ
             </button>
@@ -76,60 +74,46 @@ export const AuthModal: React.FC = () => {
                 setMode('register');
                 setError(null);
               }}
-              className={`py-2 rounded-lg text-sm font-semibold transition-colors ${
-                mode === 'register'
-                  ? 'bg-paper text-ink shadow-sm'
-                  : 'text-mutedInk hover:text-ink'
-              }`}
+              className={mode === 'register' ? 'filter-chip-active flex-1 justify-center' : 'filter-chip flex-1 justify-center'}
             >
               สมัครสมาชิก
             </button>
           </div>
 
-          {error && (
-            <div className="mb-4 rounded-xl bg-rose-50 border border-rose-200 px-3.5 py-2.5 text-xs font-medium text-rose-700">
-              {error}
-            </div>
-          )}
+          {error && <p className="text-sm font-medium text-sale">{error}</p>}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'register' && (
               <>
                 <div>
-                  <label className="block text-xs font-semibold text-ink mb-1.5">
+                  <label className="block text-xs font-medium text-mute mb-1.5">
                     ชื่อ-นามสกุล / ชื่อร้านค้า
                   </label>
-                  <div className="relative">
-                    <UserIcon className="w-4 h-4 text-mutedInk absolute left-3 top-3" />
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="เช่น พิมพ์ชนก ใจดี"
-                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-stoneBorder bg-ivory/60 text-sm focus:outline-none focus:ring-2 focus:ring-vermilion/30 focus:border-vermilion"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="เช่น พิมพ์ชนก ใจดี"
+                    className="hairline-input w-full"
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-ink mb-1.5">เบอร์โทรศัพท์</label>
-                    <div className="relative">
-                      <Phone className="w-4 h-4 text-mutedInk absolute left-3 top-3" />
-                      <input
-                        type="text"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="08x-xxx-xxxx"
-                        className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-stoneBorder bg-ivory/60 text-sm focus:outline-none focus:ring-2 focus:ring-vermilion/30 focus:border-vermilion"
-                      />
-                    </div>
+                    <label className="block text-xs font-medium text-mute mb-1.5">เบอร์โทรศัพท์</label>
+                    <input
+                      type="text"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="08x-xxx-xxxx"
+                      className="hairline-input w-full"
+                    />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-ink mb-1.5">ประเภทบัญชี</label>
+                    <label className="block text-xs font-medium text-mute mb-1.5">ประเภทบัญชี</label>
                     <select
                       value={role}
                       onChange={(e) => setRole(e.target.value as UserRole)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-stoneBorder bg-ivory/60 text-sm focus:outline-none focus:ring-2 focus:ring-vermilion/30 focus:border-vermilion"
+                      className="hairline-input w-full"
                     >
                       <option value="buyer">ผู้ซื้อ / นักสะสม</option>
                       <option value="seller">ผู้ขายสินค้า</option>
@@ -140,68 +124,58 @@ export const AuthModal: React.FC = () => {
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-ink mb-1.5">อีเมล</label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-mutedInk absolute left-3 top-3" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-stoneBorder bg-ivory/60 text-sm focus:outline-none focus:ring-2 focus:ring-vermilion/30 focus:border-vermilion"
-                />
-              </div>
+              <label className="block text-xs font-medium text-mute mb-1.5">อีเมล</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="hairline-input w-full"
+              />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-ink mb-1.5">รหัสผ่าน</label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-mutedInk absolute left-3 top-3" />
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-stoneBorder bg-ivory/60 text-sm focus:outline-none focus:ring-2 focus:ring-vermilion/30 focus:border-vermilion"
-                />
-              </div>
+              <label className="block text-xs font-medium text-mute mb-1.5">รหัสผ่าน</label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="hairline-input w-full"
+              />
             </div>
 
-            <button
-              type="submit"
-              className="w-full py-2.5 rounded-xl bg-vermilion hover:bg-vermilion-hover text-white font-semibold text-sm transition-colors inline-flex items-center justify-center gap-2"
-            >
-              {mode === 'register' && <UserPlus className="w-4 h-4" />}
-              <span>{mode === 'login' ? 'เข้าสู่ระบบ' : 'สร้างบัญชี SomJing'}</span>
+            <button type="submit" className="btn-primary w-full">
+              <span>{mode === 'login' ? 'Sign In' : 'Create Account'}</span>
             </button>
           </form>
 
           {/* Demo Accounts Helper */}
-          <div className="mt-5 pt-4 border-t border-stoneBorder">
-            <p className="text-xs font-semibold text-mutedInk mb-2">
-              บัญชีทดสอบสำเร็จรูป (รหัสผ่าน: <span className="font-mono">password123</span>)
+          <div className="pt-4 border-t border-hairline space-y-2.5">
+            <p className="text-xs font-medium text-mute">
+              บัญชีทดสอบสำเร็จรูป (รหัสผ่าน: <span className="font-mono text-ink">password123</span>)
             </p>
-            <div className="grid grid-cols-3 gap-2 text-xs">
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => quickFill('buyer@somjing.com')}
-                className="px-2.5 py-2 rounded-lg border border-stoneBorder hover:bg-sand text-ink font-medium"
+                className="filter-chip text-xs"
               >
                 ผู้ซื้อ (Buyer)
               </button>
               <button
                 type="button"
                 onClick={() => quickFill('seller@somjing.com')}
-                className="px-2.5 py-2 rounded-lg border border-stoneBorder hover:bg-sand text-ink font-medium"
+                className="filter-chip text-xs"
               >
                 ผู้ขาย (Seller)
               </button>
               <button
                 type="button"
                 onClick={() => quickFill('admin@somjing.com')}
-                className="px-2.5 py-2 rounded-lg border border-stoneBorder hover:bg-sand text-ink font-medium"
+                className="filter-chip text-xs"
               >
                 แอดมิน (Admin)
               </button>

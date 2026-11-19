@@ -1,13 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Building2,
-  CheckCircle2,
-  CreditCard,
-  Lock,
-  QrCode,
-  ShieldCheck,
-  X,
-} from 'lucide-react';
+import { Building2, CreditCard, Lock, QrCode, X } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { PaymentMethod } from '../types';
 import { formatTHB } from '../utils/format';
@@ -33,68 +25,59 @@ export const PaymentModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/55 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-paper border border-stoneBorder rounded-2xl max-w-xl w-full shadow-elevated overflow-hidden my-8">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stoneBorder bg-sand/60">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 overflow-y-auto">
+      <div className="bg-canvas border border-hairline rounded-none max-w-xl w-full my-8 overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-hairline">
           <div className="flex items-center gap-2">
-            <Lock className="w-5 h-5 text-escrowBlue" />
-            <h2 className="text-lg font-bold text-ink">
-              ชำระเงินจำลอง &amp; พักเงินในระบบ Escrow
+            <Lock className="w-5 h-5 text-ink" />
+            <h2 className="text-2xl font-medium text-ink leading-[1.2]">
+              ชำระเงินจำลอง &amp; พักเงิน Escrow
             </h2>
           </div>
           <button
             type="button"
             onClick={() => setCheckoutTarget(null)}
-            className="p-1.5 rounded-lg text-mutedInk hover:text-ink hover:bg-sand"
+            className="btn-icon-circular"
             aria-label="ปิดหน้าชำระเงิน"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-6">
           {/* Item Summary */}
-          <div className="flex items-center gap-4 p-3.5 rounded-xl bg-ivory border border-stoneBorder">
+          <div className="flex items-center gap-4 pb-6 border-b border-hairline">
             <SafeImage
               src={checkoutTarget.productImage}
               alt={checkoutTarget.productTitle}
-              className="w-16 h-16 rounded-lg object-cover shrink-0 border border-stoneBorder"
+              className="w-20 h-20 bg-soft-cloud object-cover shrink-0 rounded-none"
             />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
+            <div className="flex-1 min-w-0 space-y-1.5">
+              <div className="flex items-center gap-2 flex-wrap">
                 <VerificationBadge
                   status={checkoutTarget.isVerifiedItem ? 'verified' : 'unverified'}
                   certificateId={checkoutTarget.certificateId}
                   compact
                 />
-                <span className="text-[11px] font-medium text-mutedInk">
-                  ผู้ขาย: {checkoutTarget.sellerName}
+                <span className="text-xs font-medium text-mute">
+                  Seller: {checkoutTarget.sellerName}
                 </span>
               </div>
-              <p className="text-sm font-semibold text-ink line-clamp-2">
+              <p className="text-base font-medium text-ink line-clamp-2">
                 {checkoutTarget.productTitle}
               </p>
             </div>
           </div>
 
-          {/* Escrow Explanation Banner */}
-          <div className="rounded-xl bg-escrowBlue-soft border border-escrowBlue/20 p-3.5 flex items-start gap-3">
-            <ShieldCheck className="w-5 h-5 text-escrowBlue shrink-0 mt-0.5" />
-            <div className="text-xs text-ink/90 leading-relaxed">
-              <p className="font-semibold text-escrowBlue mb-0.5">
-                เงินของคุณจะถูกพักไว้ที่ตัวกลาง SomJing Escrow ก่อน
-              </p>
-              <p>
-                ระบบจะยังไม่โอนเงินให้ผู้ขายทันที จนกว่าผู้ขายจะจัดส่งสินค้าและคุณกด
-                &ldquo;ยืนยันรับของถูกต้อง&rdquo; เรียบร้อยแล้ว
-              </p>
-            </div>
-          </div>
+          <p className="text-sm text-charcoal bg-soft-cloud p-4 leading-relaxed">
+            <strong className="text-ink">SomJing Escrow Protection:</strong>{' '}
+            ยอดชำระจะถูกพักไว้ในบัญชีกลางของแพลตฟอร์มและจะไม่โอนให้ผู้ขาย จนกว่าผู้ขายจะจัดส่งและคุณกดยืนยันรับของเรียบร้อยแล้ว
+          </p>
 
-          {/* Payment Methods */}
-          <div>
-            <p className="text-xs font-semibold text-ink mb-2.5">เลือกช่องทางชำระเงินจำลอง</p>
-            <div className="grid grid-cols-3 gap-2.5">
+          {/* Payment Method Chips */}
+          <div className="space-y-2.5">
+            <p className="text-sm font-medium text-ink">เลือกช่องทางชำระเงินจำลอง</p>
+            <div className="flex flex-wrap gap-2">
               {[
                 {
                   id: 'PromptPay QR' as PaymentMethod,
@@ -116,11 +99,7 @@ export const PaymentModal: React.FC = () => {
                   key={m.id}
                   type="button"
                   onClick={() => setMethod(m.id)}
-                  className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border text-xs font-semibold transition-all ${
-                    method === m.id
-                      ? 'border-vermilion bg-vermilion-soft text-vermilion'
-                      : 'border-stoneBorder bg-paper text-mutedInk hover:text-ink hover:bg-sand/50'
-                  }`}
+                  className={method === m.id ? 'filter-chip-active' : 'filter-chip'}
                 >
                   {m.icon}
                   <span>{m.label}</span>
@@ -131,9 +110,8 @@ export const PaymentModal: React.FC = () => {
 
           {/* Method Details */}
           {method === 'PromptPay QR' && (
-            <div className="rounded-xl border border-stoneBorder bg-ivory/70 p-4 flex flex-col sm:flex-row items-center gap-4">
-              {/* Crisp Geometric QR Placeholder */}
-              <div className="w-28 h-28 bg-white p-2 rounded-xl border border-stoneBorder shrink-0 flex items-center justify-center">
+            <div className="border border-hairline p-4 flex flex-col sm:flex-row items-center gap-4">
+              <div className="w-28 h-28 bg-soft-cloud p-2 shrink-0 flex items-center justify-center">
                 <svg viewBox="0 0 100 100" className="w-full h-full text-ink">
                   <rect x="6" y="6" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="6" />
                   <rect x="14" y="14" width="12" height="12" fill="currentColor" />
@@ -153,13 +131,13 @@ export const PaymentModal: React.FC = () => {
                   <rect x="72" y="80" width="18" height="12" fill="currentColor" />
                 </svg>
               </div>
-              <div className="text-xs space-y-1 text-center sm:text-left">
-                <p className="font-bold text-ink">Thai QR Payment (SomJing Escrow Account)</p>
-                <p className="text-mutedInk">
-                  ยอดชำระเข้าบัญชีพักเงินกลาง:{' '}
-                  <span className="font-mono font-bold text-ink">{formatTHB(totalPaid)}</span>
+              <div className="text-sm space-y-1 text-center sm:text-left">
+                <p className="font-medium text-ink">Thai QR Payment (Escrow Sandbox)</p>
+                <p className="text-mute">
+                  ยอดพักเงิน:{' '}
+                  <span className="font-mono font-medium text-ink">{formatTHB(totalPaid)}</span>
                 </p>
-                <p className="text-[11px] text-emeraldSeal font-medium">
+                <p className="text-xs text-success font-medium">
                   * ระบบจำลองสำหรับการสาธิต ไม่มีการตัดเงินจริง
                 </p>
               </div>
@@ -167,41 +145,31 @@ export const PaymentModal: React.FC = () => {
           )}
 
           {method === 'Credit Card' && (
-            <div className="rounded-xl border border-stoneBorder bg-ivory/70 p-4 space-y-3 text-xs">
+            <div className="border border-hairline p-4 space-y-3 text-sm">
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-ink">Visa / Mastercard (Demo Sandbox)</span>
-                <span className="font-mono text-mutedInk">3D-Secure Protected</span>
+                <span className="font-medium text-ink">Visa / Mastercard (Demo)</span>
+                <span className="font-mono text-xs text-mute">3D-Secure</span>
               </div>
               <input
                 type="text"
                 readOnly
                 value="4532 •••• •••• 8890"
-                className="w-full px-3 py-2 rounded-lg border border-stoneBorder bg-white font-mono text-ink"
+                className="hairline-input w-full font-mono"
               />
               <div className="grid grid-cols-2 gap-3">
-                <input
-                  type="text"
-                  readOnly
-                  value="12 / 29"
-                  className="px-3 py-2 rounded-lg border border-stoneBorder bg-white font-mono text-ink"
-                />
-                <input
-                  type="text"
-                  readOnly
-                  value="CVV •••"
-                  className="px-3 py-2 rounded-lg border border-stoneBorder bg-white font-mono text-ink"
-                />
+                <input type="text" readOnly value="12 / 29" className="hairline-input font-mono" />
+                <input type="text" readOnly value="CVV •••" className="hairline-input font-mono" />
               </div>
             </div>
           )}
 
           {method === 'Mobile Banking' && (
-            <div className="rounded-xl border border-stoneBorder bg-ivory/70 p-4 space-y-2 text-xs">
-              <label className="block font-semibold text-ink">เลือกธนาคารสำหรับจำลองการโอน</label>
+            <div className="border border-hairline p-4 space-y-2 text-sm">
+              <label className="block font-medium text-ink">เลือกธนาคารจำลอง</label>
               <select
                 value={selectedBank}
                 onChange={(e) => setSelectedBank(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-stoneBorder bg-white text-ink font-medium"
+                className="hairline-input w-full"
               >
                 <option>K PLUS (กสิกรไทย)</option>
                 <option>SCB EASY (ไทยพาณิชย์)</option>
@@ -212,20 +180,18 @@ export const PaymentModal: React.FC = () => {
           )}
 
           {/* Price Breakdown */}
-          <div className="rounded-xl bg-sand/70 p-4 space-y-2 text-sm">
-            <div className="flex justify-between text-mutedInk">
+          <div className="border-t border-hairline pt-4 space-y-2 text-sm">
+            <div className="flex justify-between text-mute">
               <span>ราคาสินค้า</span>
-              <span className="font-mono font-medium text-ink">
-                {formatTHB(checkoutTarget.amount)}
-              </span>
+              <span className="font-mono text-ink">{formatTHB(checkoutTarget.amount)}</span>
             </div>
-            <div className="flex justify-between text-mutedInk">
-              <span>ค่าบริการคุ้มครองตัวกลาง Escrow (2%)</span>
-              <span className="font-mono font-medium text-ink">{formatTHB(escrowFee)}</span>
+            <div className="flex justify-between text-mute">
+              <span>ค่าบริการคุ้มครอง Escrow (2%)</span>
+              <span className="font-mono text-ink">{formatTHB(escrowFee)}</span>
             </div>
-            <div className="pt-2 border-t border-stoneBorder flex justify-between items-baseline">
-              <span className="font-bold text-ink">ยอดรวมที่พักในระบบ Escrow</span>
-              <span className="text-xl font-bold font-mono text-vermilion tabular-nums">
+            <div className="pt-3 border-t border-hairline flex justify-between items-baseline">
+              <span className="text-base font-medium text-ink">ยอดรวมที่พักใน Escrow</span>
+              <span className="text-2xl font-medium font-mono text-ink tabular-nums">
                 {formatTHB(totalPaid)}
               </span>
             </div>
@@ -235,12 +201,11 @@ export const PaymentModal: React.FC = () => {
             type="button"
             disabled={processing}
             onClick={handleConfirmPayment}
-            className="w-full py-3 rounded-xl bg-vermilion hover:bg-vermilion-hover disabled:opacity-60 text-white font-semibold text-sm transition-colors inline-flex items-center justify-center gap-2"
+            className="btn-primary w-full"
           >
-            <CheckCircle2 className="w-4 h-4" />
             <span>
               {processing
-                ? 'กำลังประมวลผลการพักเงินเข้าบัญชี Escrow...'
+                ? 'กำลังพักเงินเข้าบัญชี Escrow...'
                 : `ยืนยันชำระเงินจำลอง ${formatTHB(totalPaid)}`}
             </span>
           </button>

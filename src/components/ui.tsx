@@ -39,13 +39,13 @@ export const VerificationBadge: React.FC<{
   if (status === 'verified') {
     return (
       <span
-        title={certificateId ? `เลขที่ใบรับรอง: ${certificateId}` : 'ผ่านการตรวจรับรองความแท้โดย SomJing'}
-        className="inline-flex items-center gap-1.5 rounded-full bg-emeraldSeal-soft border border-emeraldSeal/25 px-2.5 py-1 text-xs font-semibold text-emeraldSeal"
+        title={certificateId ? `Certificate: ${certificateId}` : 'SomJing Verified Authentic'}
+        className="badge-promo"
       >
-        <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+        <ShieldCheck className="w-3.5 h-3.5 text-success shrink-0" />
         <span>{compact ? 'Verified' : 'SomJing Verified'}</span>
         {!compact && certificateId && (
-          <span className="font-mono text-[11px] opacity-85 border-l border-emeraldSeal/25 pl-1.5">
+          <span className="font-mono text-[11px] text-mute border-l border-hairline pl-1.5">
             {certificateId}
           </span>
         )}
@@ -55,25 +55,25 @@ export const VerificationBadge: React.FC<{
 
   if (status === 'pending') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-1 text-xs font-medium text-amber-800">
-        <Clock className="w-3.5 h-3.5 shrink-0" />
-        <span>รอแอดมินตรวจ Verify</span>
+      <span className="badge-promo text-charcoal">
+        <Clock className="w-3.5 h-3.5 text-ink shrink-0" />
+        <span>Pending Verify</span>
       </span>
     );
   }
 
   if (status === 'rejected') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200 px-2.5 py-1 text-xs font-medium text-rose-700">
-        <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
-        <span>ไม่ผ่าน Verify</span>
+      <span className="badge-promo text-sale">
+        <ShieldAlert className="w-3.5 h-3.5 text-sale shrink-0" />
+        <span>Verify Rejected</span>
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-sand border border-stoneBorder px-2.5 py-1 text-xs font-medium text-mutedInk">
-      <span>ยังไม่ส่ง Verify</span>
+    <span className="badge-promo text-mute">
+      <span>Unverified</span>
     </span>
   );
 };
@@ -87,27 +87,27 @@ export const ToastContainer: React.FC = () => {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="pointer-events-auto flex items-start gap-3 rounded-xl bg-paper border border-stoneBorder shadow-elevated p-3.5 text-sm animate-in fade-in slide-in-from-bottom-2"
+          className="pointer-events-auto flex items-start gap-3 rounded-none bg-ink text-canvas border border-ink p-4 text-sm"
         >
           {toast.type === 'success' && (
-            <CheckCircle2 className="w-5 h-5 text-emeraldSeal shrink-0 mt-0.5" />
+            <CheckCircle2 className="w-5 h-5 text-success-bright shrink-0 mt-0.5" />
           )}
           {toast.type === 'error' && (
-            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-sale shrink-0 mt-0.5" />
           )}
           {toast.type === 'info' && (
-            <Info className="w-5 h-5 text-escrowBlue shrink-0 mt-0.5" />
+            <Info className="w-5 h-5 text-canvas shrink-0 mt-0.5" />
           )}
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-ink">{toast.title}</p>
+            <p className="font-medium text-canvas">{toast.title}</p>
             {toast.detail && (
-              <p className="text-xs text-mutedInk mt-0.5 leading-relaxed">{toast.detail}</p>
+              <p className="text-xs text-stone mt-1 leading-relaxed">{toast.detail}</p>
             )}
           </div>
           <button
             type="button"
             onClick={() => dismissToast(toast.id)}
-            className="text-mutedInk hover:text-ink p-0.5 rounded-md"
+            className="text-stone hover:text-canvas p-0.5"
             aria-label="ปิดการแจ้งเตือน"
           >
             <X className="w-4 h-4" />

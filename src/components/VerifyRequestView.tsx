@@ -1,13 +1,5 @@
 import React, { useState } from 'react';
-import {
-  BadgeCheck,
-  CheckCircle2,
-  Clock,
-  FileCheck2,
-  ShieldAlert,
-  ShieldCheck,
-  Upload,
-} from 'lucide-react';
+import { CheckCircle2, ShieldCheck } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { ProductCategory } from '../types';
 import { CATEGORY_LABELS, formatThaiDateTime } from '../utils/format';
@@ -74,14 +66,14 @@ export const VerifyRequestView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+    <div className="space-y-12">
+      <div className="pb-6 border-b border-hairline flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-ink">
-            ระบบขอรับรองความแท้ (SomJing Verification)
+          <h1 className="text-[32px] font-medium leading-[1.2] text-ink">
+            ขอรับรองความแท้ (SomJing Verification)
           </h1>
-          <p className="text-sm text-mutedInk mt-1">
-            ส่งข้อมูล Serial Number และหลักฐานภาพถ่ายให้ผู้เชี่ยวชาญตรวจสอบเพื่อรับตรา SomJing Verified Badge
+          <p className="text-base text-mute mt-1">
+            ส่ง Serial Number และหลักฐานภาพถ่ายให้ผู้เชี่ยวชาญตรวจสอบเพื่อรับตรา SomJing Verified Badge
           </p>
         </div>
 
@@ -91,59 +83,49 @@ export const VerifyRequestView: React.FC = () => {
             switchDemoRole('admin');
             setActiveTab('admin');
           }}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-ink text-white text-xs font-semibold hover:bg-ink/90 shrink-0"
+          className="btn-secondary shrink-0"
         >
-          <ShieldCheck className="w-4 h-4 text-emerald-300" />
-          <span>สลับเป็นแอดมินเพื่อกดอนุมัติ Verify</span>
+          <ShieldCheck className="w-4 h-4 text-success" />
+          <span>สลับเป็นแอดมินเพื่อกดอนุมัติ</span>
         </button>
       </div>
 
-      <div className="grid lg:grid-cols-12 gap-8 items-start">
+      <div className="grid lg:grid-cols-12 gap-10 items-start">
         {/* Submission Form */}
-        <form
-          onSubmit={handleSubmit}
-          className="lg:col-span-5 rounded-2xl bg-paper border border-stoneBorder p-6 space-y-5"
-        >
-          <h2 className="text-base font-bold text-ink inline-flex items-center gap-2">
-            <BadgeCheck className="w-5 h-5 text-emeraldSeal" />
-            <span>ส่งคำขอ Verify สินค้า</span>
-          </h2>
+        <form onSubmit={handleSubmit} className="lg:col-span-5 space-y-5">
+          <h2 className="text-xl font-medium text-ink">ส่งคำขอ Verify สินค้า</h2>
 
-          <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-sand">
+          <div className="flex gap-2">
             <button
               type="button"
               onClick={() => setMode('existing')}
-              className={`py-2 rounded-lg text-xs font-semibold transition-colors ${
-                mode === 'existing' ? 'bg-paper text-ink shadow-sm' : 'text-mutedInk'
-              }`}
+              className={mode === 'existing' ? 'filter-chip-active flex-1 justify-center' : 'filter-chip flex-1 justify-center'}
             >
-              เลือกจากสินค้าที่ลงขาย
+              จากสินค้าที่ลงขาย
             </button>
             <button
               type="button"
               onClick={() => setMode('standalone')}
-              className={`py-2 rounded-lg text-xs font-semibold transition-colors ${
-                mode === 'standalone' ? 'bg-paper text-ink shadow-sm' : 'text-mutedInk'
-              }`}
+              className={mode === 'standalone' ? 'filter-chip-active flex-1 justify-center' : 'filter-chip flex-1 justify-center'}
             >
-              ระบุสินค้าใหม่ (ทั่วไป)
+              ระบุสินค้าใหม่
             </button>
           </div>
 
           {mode === 'existing' ? (
             <div>
-              <label className="block text-xs font-semibold text-ink mb-1.5">
+              <label className="block text-sm font-medium text-ink mb-2">
                 เลือกสินค้าที่ยังไม่มี Verified Badge
               </label>
               {eligibleProducts.length === 0 ? (
-                <div className="rounded-xl bg-sand p-3 text-xs text-mutedInk">
+                <div className="bg-soft-cloud p-4 text-sm text-mute">
                   สินค้าทั้งหมดถูกส่งตรวจหรือผ่าน Verify แล้ว — คุณสามารถเลือกโหมด &ldquo;ระบุสินค้าใหม่&rdquo; เพื่อทดสอบเพิ่มเติมได้
                 </div>
               ) : (
                 <select
                   value={selectedProductId}
                   onChange={(e) => setSelectedProductId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stoneBorder bg-ivory/70 text-sm"
+                  className="hairline-input w-full"
                 >
                   {eligibleProducts.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -154,9 +136,9 @@ export const VerifyRequestView: React.FC = () => {
               )}
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-ink mb-1.5">
+                <label className="block text-sm font-medium text-ink mb-2">
                   ชื่อสินค้าที่ต้องการตรวจความแท้ *
                 </label>
                 <input
@@ -165,16 +147,16 @@ export const VerifyRequestView: React.FC = () => {
                   value={customTitle}
                   onChange={(e) => setCustomTitle(e.target.value)}
                   placeholder="เช่น Rolex Datejust 36 Blue Dial / Labubu Secret"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stoneBorder bg-ivory/70 text-sm"
+                  className="hairline-input w-full"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-ink mb-1.5">หมวดหมู่</label>
+                  <label className="block text-xs font-medium text-mute mb-1.5">หมวดหมู่</label>
                   <select
                     value={customCategory}
                     onChange={(e) => setCustomCategory(e.target.value as ProductCategory)}
-                    className="w-full px-3 py-2 rounded-xl border border-stoneBorder bg-ivory/70 text-xs"
+                    className="hairline-input w-full text-xs"
                   >
                     {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
                       <option key={k} value={k}>
@@ -184,12 +166,12 @@ export const VerifyRequestView: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-ink mb-1.5">URL ภาพสินค้า</label>
+                  <label className="block text-xs font-medium text-mute mb-1.5">URL ภาพสินค้า</label>
                   <input
                     type="url"
                     value={customImage}
                     onChange={(e) => setCustomImage(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-stoneBorder bg-ivory/70 text-xs font-mono"
+                    className="hairline-input w-full font-mono text-xs"
                   />
                 </div>
               </div>
@@ -197,35 +179,32 @@ export const VerifyRequestView: React.FC = () => {
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-ink mb-1.5">
-              Serial Number / รหัสอ้างอิงบนสินค้า *
+            <label className="block text-sm font-medium text-ink mb-2">
+              Serial Number / รหัสอ้างอิง *
             </label>
             <input
               type="text"
               required
               value={serialNumber}
               onChange={(e) => setSerialNumber(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-stoneBorder bg-ivory/70 font-mono text-sm"
+              className="hairline-input w-full font-mono"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-ink mb-1.5">
-              URL ภาพหลักฐานจุดสังเกต / ใบเสร็จ (จำลองการอัปโหลด)
+            <label className="block text-sm font-medium text-ink mb-2">
+              URL ภาพหลักฐานจุดสังเกต / ใบเสร็จ
             </label>
-            <div className="relative">
-              <Upload className="w-4 h-4 text-mutedInk absolute left-3 top-3" />
-              <input
-                type="url"
-                value={evidenceImageUrl}
-                onChange={(e) => setEvidenceImageUrl(e.target.value)}
-                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-stoneBorder bg-ivory/70 font-mono text-xs"
-              />
-            </div>
+            <input
+              type="url"
+              value={evidenceImageUrl}
+              onChange={(e) => setEvidenceImageUrl(e.target.value)}
+              className="hairline-input w-full font-mono text-xs"
+            />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-ink mb-1.5">
+            <label className="block text-sm font-medium text-ink mb-2">
               คำอธิบายหลักฐานและแหล่งที่มา
             </label>
             <textarea
@@ -233,65 +212,58 @@ export const VerifyRequestView: React.FC = () => {
               required
               value={purchaseProofNote}
               onChange={(e) => setPurchaseProofNote(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-stoneBorder bg-ivory/70 text-sm"
+              className="hairline-input w-full"
             />
           </div>
 
           <button
             type="submit"
             disabled={mode === 'existing' && eligibleProducts.length === 0}
-            className="w-full py-3 rounded-xl bg-emeraldSeal hover:opacity-95 disabled:opacity-50 text-white font-semibold text-sm transition-opacity inline-flex items-center justify-center gap-2"
+            className="btn-primary w-full"
           >
-            <FileCheck2 className="w-4 h-4" />
-            <span>ส่งคำขอรับรองความแท้ (Submit Verification)</span>
+            ส่งคำขอรับรองความแท้ (Submit Verification)
           </button>
         </form>
 
         {/* Verification Status History */}
         <div className="lg:col-span-7 space-y-4">
-          <h2 className="text-base font-bold text-ink">
+          <h2 className="text-xl font-medium text-ink">
             สถานะคำขอ Verify ทั้งหมด ({verificationRequests.length})
           </h2>
 
-          <div className="space-y-3">
+          <div className="divide-y divide-hairline border-t border-b border-hairline">
             {verificationRequests.map((req) => (
-              <div
-                key={req.id}
-                className="rounded-2xl bg-paper border border-stoneBorder p-4 sm:p-5 flex flex-col sm:flex-row gap-4"
-              >
+              <div key={req.id} className="py-6 flex flex-col sm:flex-row gap-5">
                 <SafeImage
                   src={req.productImage}
                   alt={req.productTitle}
-                  className="w-full sm:w-28 h-28 rounded-xl object-cover shrink-0 border border-stoneBorder"
+                  className="w-28 h-28 bg-soft-cloud object-cover shrink-0 rounded-none"
                 />
 
                 <div className="flex-1 min-w-0 space-y-2">
                   <div className="flex items-start justify-between gap-2 flex-wrap">
                     <div>
-                      <span className="text-[11px] font-semibold text-mutedInk">
-                        {CATEGORY_LABELS[req.category]} • ผู้ส่ง: {req.sellerName}
-                      </span>
-                      <h3 className="text-sm font-bold text-ink">{req.productTitle}</h3>
+                      <p className="text-xs font-medium text-mute">
+                        {CATEGORY_LABELS[req.category]} · {req.sellerName}
+                      </p>
+                      <h3 className="text-base font-medium text-ink mt-0.5">{req.productTitle}</h3>
                     </div>
 
-                    {req.status === 'approved' ? (
-                      <VerificationBadge status="verified" certificateId={req.certificateId} />
-                    ) : req.status === 'pending' ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-1 text-xs font-semibold text-amber-800">
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>รอแอดมินตรวจสอบ</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200 px-2.5 py-1 text-xs font-semibold text-rose-700">
-                        <ShieldAlert className="w-3.5 h-3.5" />
-                        <span>ไม่ผ่านการตรวจ</span>
-                      </span>
-                    )}
+                    <VerificationBadge
+                      status={
+                        req.status === 'approved'
+                          ? 'verified'
+                          : req.status === 'pending'
+                            ? 'pending'
+                            : 'rejected'
+                      }
+                      certificateId={req.certificateId}
+                    />
                   </div>
 
-                  <p className="text-xs text-mutedInk leading-relaxed">{req.purchaseProofNote}</p>
+                  <p className="text-sm text-charcoal leading-relaxed">{req.purchaseProofNote}</p>
 
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-mutedInk pt-1">
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-mute">
                     <span>
                       Serial: <strong className="font-mono text-ink">{req.serialNumber}</strong>
                     </span>
@@ -299,16 +271,16 @@ export const VerifyRequestView: React.FC = () => {
                   </div>
 
                   {req.reviewerNote && (
-                    <div className="rounded-xl bg-ivory border border-stoneBorder px-3 py-2 text-xs flex items-start gap-2">
+                    <p className="text-xs text-ink bg-soft-cloud p-3 flex items-start gap-2">
                       <CheckCircle2
                         className={`w-4 h-4 shrink-0 mt-0.5 ${
-                          req.status === 'approved' ? 'text-emeraldSeal' : 'text-rose-600'
+                          req.status === 'approved' ? 'text-success' : 'text-sale'
                         }`}
                       />
-                      <span className="text-ink">
+                      <span>
                         <strong>ความเห็นผู้ตรวจสอบ:</strong> {req.reviewerNote}
                       </span>
-                    </div>
+                    </p>
                   )}
                 </div>
               </div>

@@ -89,9 +89,9 @@ flowchart TD
 | :--- | :--- | :--- | :--- |
 | **ภาษาและโครงสร้าง UI** | **React + TypeScript** | React 18.3, TypeScript 5.6 | พัฒนาส่วนติดต่อผู้ใช้แบบ Component-based และควบคุมชนิดข้อมูล (Strict Type Safety) ลดข้อผิดพลาดของข้อมูลราคาและสถานะ Escrow |
 | **Build Tool** | **Vite** | Vite 5.4 | เครื่องมือรันเซิร์ฟเวอร์พัฒนา (Hot Module Replacement) และ Build ไฟล์ Production ที่มีขนาดเล็กและโหลดเร็ว |
-| **การจัดรูปแบบ (Styling)** | **Tailwind CSS** | Tailwind CSS 3.4 | ออกแบบ Design System โทน *Warm Collector's Exchange* พร้อม Responsive Design รองรับทั้ง Desktop และ Mobile |
+| **การจัดรูปแบบ (Styling)** | **Tailwind CSS** | Tailwind CSS 3.4 | ออกแบบ Design System แนว *High-Contrast Editorial Commerce* ตามไฟล์ `design.md` (`#111111` Ink, `#FFFFFF` Canvas, `#F5F5F5` Soft Cloud, `30px` Pill CTA, `1px` Hairline) รองรับ Responsive ทั้ง Desktop และ Mobile |
 | **ไอคอน (Iconography)** | **Lucide React** | Lucide React 0.460 | ชุดไอคอนเวกเตอร์มาตรฐานสำหรับแสดงสัญลักษณ์ Verify, Escrow Lock, นาฬิกานับถอยหลัง และเครื่องมือแอดมิน |
-| **การจัดการฟอนต์** | **Google Fonts** | Noto Sans Thai, Plus Jakarta Sans, JetBrains Mono | รองรับภาษาไทยที่อ่านง่ายคู่กับตัวเลขแบบ Monospace (`tabular-nums`) สำหรับเวลานับถอยหลัง ราคาบิด และรหัส Certificate |
+| **การจัดการฟอนต์** | **Google Fonts** | Bebas Neue, Inter, Noto Sans Thai, JetBrains Mono | ผสาน Display Typography สำหรับแคมเปญ Hero เข้ากับตัวอักษรภาษาไทยที่อ่านง่ายและตัวเลข Monospace (`tabular-nums`) สำหรับเวลานับถอยหลัง ราคาบิด และรหัส Certificate |
 | **การจัดการสถานะและข้อมูล** | **React Context API + LocalStorage** | Browser Storage Persistence (`somjing_prototype_v1`) | จำลองฐานข้อมูลในเบราว์เซอร์ ทำให้ข้อมูลการบิดประมูล คำขอ Verify ข้อเสนอ Wanted คำสั่งซื้อ Escrow และคำตัดสินแอดมินคงอยู่ต่อเนื่องและรีเซ็ตได้ใน 1 คลิก |
 | **การควบคุมเวอร์ชันและโฮสติ้ง** | **Git, GitHub, Vercel** | `github.com/marchtanu/som-jing` | จัดเก็บ Source Code และรองรับการ Deploy เป็นเว็บไซต์สาธารณะเพื่อการทดลองใช้งาน |
 
@@ -99,7 +99,7 @@ flowchart TD
 
 ## 5.4 หน้าจอและการใช้งานระบบ
 
-โปรแกรมต้นแบบถูกออกแบบตามหลักการ **Usability และ Visual Hierarchy** โดยกำหนดความหมายของสีเพื่อสื่อสารความน่าเชื่อถือแก่ผู้ใช้งาน ได้แก่ สีเขียว Emerald (`#0D7A5F`) สำหรับสถานะผ่านการรับรองของแท้ (Verified) สีน้ำเงิน (`#1D4ED8`) สำหรับระบบคุ้มครองตัวกลาง (Escrow) และสีส้ม Vermilion (`#D94E28`) สำหรับปุ่มดำเนินการหลัก โดยมีรายละเอียดหน้าจอสำคัญ 7 ส่วน ดังนี้
+โปรแกรมต้นแบบถูกออกแบบตามหลักการ **Editorial Photography & Mechanical Restraint** (อ้างอิงแนวทางใน `design.md`) โดยใช้คู่สีหลักขาว-ดำ-เทาอ่อน (`#FFFFFF` Canvas, `#111111` Ink, `#F5F5F5` Soft Cloud) เพื่อขับภาพถ่ายสินค้าให้โดดเด่น ใช้ภาพสินค้าอัตราส่วน 1:1 เต็มขอบ ปุ่มทรง Pill (`30px`) สำหรับการกระทำหลัก เส้นแบ่ง Hairline (`#CACACB`) แทนเงา และสงวนสีเฉพาะจุดที่มีความหมายสำคัญ ได้แก่ สีเขียว Success (`#007D48`) สำหรับสถานะ **Verified** และสีแดง (`#D30005`) สำหรับเวลานับถอยหลังประมูลและข้อร้องเรียน โดยมีรายละเอียดหน้าจอสำคัญ 7 ส่วน ดังนี้
 
 1. **แถบนำทางและเครื่องมือสาธิต (Navigation & Demo Switcher):** อยู่ด้านบนสุดของทุกหน้าจอ ช่วยให้ผู้ใช้หรือผู้ประเมินระบบสามารถสลับบทบาทระหว่าง **ผู้ซื้อ (Buyer)**, **ผู้ขาย (Seller)** และ **แอดมิน (Admin)** ได้ในคลิกเดียว พร้อมปุ่ม **“รีเซ็ตข้อมูลตัวอย่าง”** และแสดงจำนวนรายการที่รอดำเนินการบนเมนู
 2. **หน้าตลาดสินค้าและค้นหาตามหมวดหมู่ (Catalog & Search):** แสดงแบนเนอร์สรุปจุดขาย ช่องค้นหาอัจฉริยะ (ค้นได้ทั้งชื่อสินค้า ชื่อร้าน และเลขใบรับรอง) ปุ่มกรอง 4 หมวดหมู่ (อาร์ตทอย, สนีกเกอร์, แก็ดเจ็ต, นาฬิกา/การ์ดสะสม) ตัวกรองเฉพาะสินค้าที่ผ่าน Verify และการ์ดสินค้าที่แสดงเวลาประมูลนับถอยหลังแบบเรียลไทม์
