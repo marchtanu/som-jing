@@ -25,7 +25,7 @@ export const CatalogView: React.FC = () => {
 
   const isSeller = currentUser?.role === 'seller';
   const isAdmin = currentUser?.role === 'admin';
-  const canSaveWatchlist = !isSeller && !isAdmin;
+  const canSaveWatchlist = !isAdmin;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory | 'all'>('all');

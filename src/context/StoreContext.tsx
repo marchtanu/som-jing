@@ -73,6 +73,7 @@ interface StoreContextValue {
     role: UserRole;
   }) => { ok: boolean; error?: string };
   logoutUser: () => void;
+  upgradeToSeller: () => void;
 
   // Watchlist & Options
   toggleWatchlist: (productId: string) => void;
@@ -328,6 +329,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     pushToast('info', 'ออกจากระบบแล้ว', 'กรุณาเข้าสู่ระบบเพื่อใช้งานต่อ');
   };
 
+  const upgradeToSeller = () => {
+    if (!currentUser || currentUser.role !== 'buyer') return;
+    setState((prev) => ({
+      ...prev,
+      users: prev.users.map((u) =>
+        u.id === currentUser.id ? { ...u, role: 'seller' } : u
+      ),
+    }));
+    pushToast(
+      'success',
+      'เปิดสิทธิ์บัญชีผู้ขายสำเร็จ!',
+      'ตอนนี้คุณสามารถลงขายสินค้า ขอ Verify และยื่นข้อเสนอใน Wanted ได้แล้ว'
+    );
+  };
+
   const toggleWatchlist = (productId: string) => {
     const exists = state.watchlistIds.includes(productId);
     setState((prev) => ({
@@ -373,13 +389,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setAuthModalOpen(true);
       return { ok: false, error: 'กรุณาเข้าสู่ระบบก่อนทำการบิดประมูล' };
     }
-    if (currentUser.role !== 'buyer') {
+    if (currentUser.role === 'admin') {
       return {
         ok: false,
-        error:
-          currentUser.role === 'admin'
-            ? 'บัญชีผู้ดูแลระบบ (Admin) ไม่สามารถเข้าร่วมบิดประมูลได้เพื่อความเป็นกลาง'
-            : 'บัญชีผู้ขาย (Seller) ไม่สามารถบิดประมูลสินค้าได้ กรุณาใช้บัญชีผู้ซื้อ (Customer)',
+        error: 'บัญชีผู้ดูแลระบบ (Admin) ไม่สามารถเข้าร่วมบิดประมูลได้เพื่อความเป็นกลาง',
       };
     }
     const product = state.products.find((p) => p.id === productId);
@@ -1090,6 +1103,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         loginUser,
         registerUser,
         logoutUser,
+        upgradeToSeller,
         toggleWatchlist,
         setProductSelectedOption,
         getSelectedOptionForProduct,

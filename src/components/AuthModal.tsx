@@ -11,6 +11,7 @@ export const AuthModal: React.FC = () => {
     loginUser,
     registerUser,
     logoutUser,
+    upgradeToSeller,
     resetDemoData,
     escrowOrders,
     watchlistIds,
@@ -135,6 +136,20 @@ export const AuthModal: React.FC = () => {
             </div>
 
             <div className="space-y-2.5 pt-2">
+              {currentUser.role === 'buyer' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    upgradeToSeller();
+                    setAuthModalOpen(false);
+                    setActiveTab('sell');
+                  }}
+                  className="btn-secondary w-full h-11 text-sm border border-ink"
+                >
+                  เปิดสิทธิ์ลงขายสินค้า (Activate Seller Mode)
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => {

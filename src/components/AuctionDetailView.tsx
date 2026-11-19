@@ -55,7 +55,6 @@ export const AuctionDetailView: React.FC = () => {
   const minNextBid = product.currentPrice + product.minBidIncrement;
   const isSaved = watchlistIds.includes(product.id);
   const isOwnListing = currentUser?.id === product.sellerId;
-  const isSellerAccount = currentUser?.role === 'seller';
   const isAdmin = currentUser?.role === 'admin';
 
   const handleSelectOption = (optionId: string, imageIndex: number) => {
@@ -112,7 +111,7 @@ export const AuctionDetailView: React.FC = () => {
           </p>
         </div>
 
-        {!isSellerAccount && !isAdmin && (
+        {!isAdmin && (
           <button
             type="button"
             onClick={() => toggleWatchlist(product.id)}
@@ -270,22 +269,6 @@ export const AuctionDetailView: React.FC = () => {
                   ดูคำสั่งซื้อ Escrow ของฉัน
                 </button>
               </div>
-            </div>
-          ) : isSellerAccount ? (
-            <div className="bg-soft-cloud p-5 space-y-3 border border-hairline">
-              <p className="text-sm font-medium text-ink">
-                โหมดบัญชีผู้ขาย (Seller Account): บัญชีผู้ขายไม่สามารถบิดประมูลหรือสั่งซื้อสินค้าได้ หากต้องการซื้อกรุณาเข้าสู่ระบบด้วยบัญชีผู้ซื้อ (Customer)
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedProductId(null);
-                  setActiveTab('sell');
-                }}
-                className="btn-secondary bg-canvas border border-hairline h-10 px-5 text-sm"
-              >
-                ไปยังหน้าลงขายสินค้าของคุณ
-              </button>
             </div>
           ) : isAdmin ? (
             <div className="bg-soft-cloud p-5 space-y-3 border border-hairline">

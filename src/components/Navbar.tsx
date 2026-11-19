@@ -42,13 +42,12 @@ export const Navbar: React.FC = () => {
         const isActive = o.status !== 'released' && o.status !== 'refunded';
         if (!isActive) return false;
         if (isAdmin) return true;
-        if (isBuyer) return o.buyerId === currentUser.id;
-        if (isSeller) return o.sellerId === currentUser.id;
-        return false;
+        return o.buyerId === currentUser.id || o.sellerId === currentUser.id;
       }).length
     : 0;
   const openWantedCount = wantedListings.filter((w) => w.status === 'open').length;
 
+  // Primary commerce/back-office navigation (no academic report tab cluttering main storefront nav)
   const navItems: {
     id: ActiveTab;
     label: string;
@@ -57,10 +56,9 @@ export const Navbar: React.FC = () => {
     if (isAdmin) {
       return [
         { id: 'admin', label: 'Admin Console', badge: adminBadgeCount },
-        { id: 'catalog', label: 'Explore & Auctions' },
-        { id: 'wanted', label: 'Wanted', badge: openWantedCount },
         { id: 'escrow', label: 'Escrow ทั้งระบบ', badge: myActiveEscrowCount },
-        { id: 'report', label: 'บทที่ 5' },
+        { id: 'catalog', label: 'ดูหน้าร้าน (Storefront)' },
+        { id: 'wanted', label: 'กระดาน Wanted', badge: openWantedCount },
       ];
     }
     if (isSeller) {
@@ -68,9 +66,8 @@ export const Navbar: React.FC = () => {
         { id: 'catalog', label: 'Explore & Auctions' },
         { id: 'sell', label: 'ลงขายสินค้า' },
         { id: 'verify', label: 'ขอ Verify' },
-        { id: 'wanted', label: 'Wanted (เสนอขาย)', badge: openWantedCount },
-        { id: 'escrow', label: 'รายการขาย Escrow', badge: myActiveEscrowCount },
-        { id: 'report', label: 'บทที่ 5' },
+        { id: 'wanted', label: 'Wanted', badge: openWantedCount },
+        { id: 'escrow', label: 'รายการ Escrow', badge: myActiveEscrowCount },
       ];
     }
     if (isBuyer) {
@@ -78,14 +75,13 @@ export const Navbar: React.FC = () => {
         { id: 'catalog', label: 'Explore & Auctions' },
         { id: 'wanted', label: 'Wanted', badge: openWantedCount },
         { id: 'escrow', label: 'คำสั่งซื้อ Escrow', badge: myActiveEscrowCount },
-        { id: 'report', label: 'บทที่ 5' },
       ];
     }
     // Guest
     return [
       { id: 'catalog', label: 'Explore & Auctions' },
       { id: 'wanted', label: 'Wanted', badge: openWantedCount },
-      { id: 'report', label: 'บทที่ 5' },
+      { id: 'sell', label: 'ลงขายสินค้า' },
     ];
   })();
 
@@ -100,14 +96,14 @@ export const Navbar: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-40 bg-canvas">
-      {/* Real Commerce Utility Bar (#f5f5f5 soft-cloud, 36px height) */}
+      {/* Utility Bar (#f5f5f5 soft-cloud, 36px height) */}
       <div className="bg-soft-cloud text-ink text-xs font-medium h-9">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-8 xl:px-14 h-full flex items-center justify-between gap-4">
           <p className="hidden md:block text-mute truncate">
             {isAdmin
-              ? 'SomJing Trust & Verification Center · Administrator Workspace'
+              ? 'SomJing Trust & Verification Center · Back-Office Administration'
               : isSeller
-                ? 'SomJing Seller Hub · ตรวจรับรองความแท้ & รับเงินปลอดภัยผ่าน Escrow'
+                ? 'SomJing Seller & Collector Hub · Verified Authenticity & Escrow Protected'
                 : 'SomJing Authenticity Guarantee · 100% Escrow Protected Transactions'}
           </p>
 
@@ -220,9 +216,9 @@ export const Navbar: React.FC = () => {
             })}
           </nav>
 
-          {/* Right: Role-Fitted Circular Icon Buttons */}
+          {/* Right: Circular Utility Icon Buttons */}
           <div className="flex items-center gap-2 shrink-0">
-            {(isBuyer || role === 'guest') && (
+            {!isAdmin && (
               <button
                 type="button"
                 onClick={() => handleSelectTab('catalog')}
@@ -244,7 +240,7 @@ export const Navbar: React.FC = () => {
                 type="button"
                 onClick={() => handleSelectTab('escrow')}
                 className="btn-icon-circular relative"
-                title={isSeller ? 'รายการขาย Escrow' : isAdmin ? 'Escrow ทั้งระบบ' : 'คำสั่งซื้อ Escrow'}
+                title={isSeller ? 'รายการ Escrow' : isAdmin ? 'Escrow ทั้งระบบ' : 'คำสั่งซื้อ Escrow'}
                 aria-label="คำสั่งซื้อ Escrow"
               >
                 <ShoppingBag className="w-5 h-5" />
@@ -326,6 +322,15 @@ export const Navbar: React.FC = () => {
                     </button>
                   );
                 })}
+                <button
+                  type="button"
+                  onClick={() => handleSelectTab('report')}
+                  className={`w-full py-5 flex items-center justify-between text-left text-base font-medium ${
+                    activeTab === 'report' ? 'text-ink font-semibold underline underline-offset-4' : 'text-charcoal'
+                  }`}
+                >
+                  <span>คู่มือ &amp; รายงานบทที่ 5</span>
+                </button>
               </nav>
             </div>
 

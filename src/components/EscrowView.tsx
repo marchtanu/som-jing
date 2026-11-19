@@ -41,7 +41,7 @@ export const EscrowView: React.FC = () => {
     setAuthModalOpen,
   } = useStore();
 
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'disputed' | 'done'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'selling' | 'buying' | 'disputed' | 'done'>('all');
 
   const isAdmin = currentUser?.role === 'admin';
   const isSeller = currentUser?.role === 'seller';
@@ -51,14 +51,18 @@ export const EscrowView: React.FC = () => {
     if (!currentUser) return [];
     return escrowOrders.filter((o) => {
       if (isAdmin) return true;
-      if (isBuyer) return o.buyerId === currentUser.id;
-      if (isSeller) return o.sellerId === currentUser.id;
-      return false;
+      return o.buyerId === currentUser.id || o.sellerId === currentUser.id;
     });
-  }, [escrowOrders, currentUser, isAdmin, isBuyer, isSeller]);
+  }, [escrowOrders, currentUser, isAdmin]);
 
   const visibleOrders = useMemo(() => {
     return roleOrders.filter((o) => {
+      if (statusFilter === 'selling' && currentUser) {
+        return o.sellerId === currentUser.id;
+      }
+      if (statusFilter === 'buying' && currentUser) {
+        return o.buyerId === currentUser.id;
+      }
       if (statusFilter === 'active') {
         return o.status === 'held' || o.status === 'shipped' || o.status === 'received';
       }
@@ -70,7 +74,7 @@ export const EscrowView: React.FC = () => {
       }
       return true;
     });
-  }, [roleOrders, statusFilter]);
+  }, [roleOrders, statusFilter, currentUser]);
 
   const totalHeldAmount = roleOrders
     .filter(
@@ -89,13 +93,13 @@ export const EscrowView: React.FC = () => {
   const headingTitle = isAdmin
     ? 'ตรวจสอบธุรกรรม Escrow ทั้งระบบ'
     : isSeller
-      ? 'รายการขาย & จัดส่ง Escrow (Seller)'
+      ? 'รายการขาย & คำสั่งซื้อ Escrow (Seller Hub)'
       : 'คำสั่งซื้อ Escrow ของฉัน (Customer)';
 
   const headingSubtitle = isAdmin
     ? 'ติดตามยอดพักเงินและการจัดส่งทุกคำสั่งซื้อในแพลตฟอร์ม'
     : isSeller
-      ? 'แจ้งเลขพัสดุจัดส่งสินค้าและติดตามยอดเงินที่กำลังรอผู้ซื้อยืนยันรับของ'
+      ? 'แจ้งเลขพัสดุจัดส่งสินค้าที่คุณขาย และติดตามรายการที่คุณสั่งซื้อจากร้านอื่น'
       : 'ติดตามสถานะ 4 ขั้นตอน: พักเงิน → จัดส่ง → ยืนยันรับของ → ปล่อยเงิน หรือแจ้งข้อร้องเรียน';
 
   return (
@@ -146,12 +150,30 @@ export const EscrowView: React.FC = () => {
             >
               ทั้งหมด ({roleOrders.length})
             </button>
+            {isSeller && !isBuyer && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('selling')}
+                  className={statusFilter === 'selling' ? 'filter-chip-active' : 'filter-chip'}
+                >
+                  รายการขาย (Selling)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('buying')}
+                  className={statusFilter === 'buying' ? 'filter-chip-active' : 'filter-chip'}
+                >
+                  รายการที่ฉันซื้อ (Buying)
+                </button>
+              </>
+            )}
             <button
               type="button"
               onClick={() => setStatusFilter('active')}
               className={statusFilter === 'active' ? 'filter-chip-active' : 'filter-chip'}
             >
-              {isSeller ? 'รอจัดส่ง / รอผู้ซื้อรับของ' : 'กำลังดำเนินการ'}
+              {isSeller ? 'รอจัดส่ง / กำลังดำเนินการ' : 'กำลังดำเนินการ'}
             </button>
             {isAdmin && (
               <button

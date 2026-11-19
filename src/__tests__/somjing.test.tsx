@@ -154,6 +154,17 @@ describe('SomJing (สมจริง) E-Commerce Prototype Test Suite (TC-01 to
       selfBidRes = result.current.placeBid('prod-1', target.currentPrice + 2000);
     });
     expect(selfBidRes.ok).toBe(false);
+
+    // Same seller CAN bid on another seller's item (prod-3)
+    const otherItem = result.current.products.find((p) => p.id === 'prod-3')!;
+    let otherBidRes: { ok: boolean; error?: string } = { ok: false };
+    act(() => {
+      otherBidRes = result.current.placeBid(
+        'prod-3',
+        otherItem.currentPrice + otherItem.minBidIncrement
+      );
+    });
+    expect(otherBidRes.ok).toBe(true);
   });
 
   it('TC-06: creates a new product listing with custom options and queues pending verification', () => {
@@ -444,31 +455,38 @@ describe('SomJing (สมจริง) E-Commerce Prototype Test Suite (TC-01 to
     expect(result.current.watchlistIds.includes('prod-3')).toBe(false);
   });
 
-  it('TC-14: renders strictly role-appropriate Navbar items across Buyer, Seller, and Admin', () => {
+  it('TC-14: renders strictly role-appropriate Navbar items without Chapter 5 clutter in main nav', () => {
     const { unmount } = render(<App />);
 
-    // Default signed-in Buyer sees Explore, Wanted, คำสั่งซื้อ Escrow, บทที่ 5; no ลงขายสินค้า / Admin Console
+    // Default signed-in Buyer sees Explore, Wanted, คำสั่งซื้อ Escrow; no บทที่ 5 / ลงขายสินค้า / Admin Console in main nav
     const nav = screen.getByRole('navigation');
     expect(nav).toHaveTextContent('Explore & Auctions');
     expect(nav).toHaveTextContent('Wanted');
     expect(nav).toHaveTextContent('คำสั่งซื้อ Escrow');
-    expect(nav).toHaveTextContent('บทที่ 5');
+    expect(nav).not.toHaveTextContent('บทที่ 5');
     expect(nav).not.toHaveTextContent('ลงขายสินค้า');
     expect(nav).not.toHaveTextContent('ขอ Verify');
     expect(nav).not.toHaveTextContent('Admin Console');
 
-    // Sign out and sign in as Seller via real UI flow
+    // Guest sees Explore & Auctions, Wanted, ลงขายสินค้า (as storefront CTA)
     fireEvent.click(screen.getByLabelText('Sign Out'));
+    expect(nav).toHaveTextContent('Explore & Auctions');
+    expect(nav).toHaveTextContent('Wanted');
+    expect(nav).toHaveTextContent('ลงขายสินค้า');
+    expect(nav).not.toHaveTextContent('Admin Console');
+
+    // Sign in as Seller via real UI flow
     fireEvent.click(screen.getByText(/Join Us \/ Sign In/i));
     fireEvent.click(screen.getByText(/ผู้ขาย \(seller@somjing\.com\)/i));
     fireEvent.click(screen.getByRole('button', { name: /^Sign In$/i }));
 
     expect(nav).toHaveTextContent('ลงขายสินค้า');
     expect(nav).toHaveTextContent('ขอ Verify');
-    expect(nav).toHaveTextContent('รายการขาย Escrow');
+    expect(nav).toHaveTextContent('รายการ Escrow');
+    expect(nav).not.toHaveTextContent('บทที่ 5');
     expect(nav).not.toHaveTextContent('Admin Console');
 
-    // Sign out and sign in as Admin via real UI flow
+    // Sign out and sign in as Admin via real UI flow (Back-Office Navbar)
     fireEvent.click(screen.getByLabelText('Sign Out'));
     fireEvent.click(screen.getByText(/Join Us \/ Sign In/i));
     fireEvent.click(screen.getByText(/แอดมิน \(admin@somjing\.com\)/i));
@@ -476,9 +494,22 @@ describe('SomJing (สมจริง) E-Commerce Prototype Test Suite (TC-01 to
 
     expect(nav).toHaveTextContent('Admin Console');
     expect(nav).toHaveTextContent('Escrow ทั้งระบบ');
+    expect(nav).toHaveTextContent('ดูหน้าร้าน (Storefront)');
+    expect(nav).toHaveTextContent('กระดาน Wanted');
     expect(nav).not.toHaveTextContent('ลงขายสินค้า');
     expect(nav).not.toHaveTextContent('ขอ Verify');
+    expect(nav).not.toHaveTextContent('บทที่ 5');
 
     unmount();
+  });
+
+  it('TC-15: allows buyer account to upgrade to seller mode via Account Profile', () => {
+    const { result } = renderHook(() => useStore(), { wrapper: createWrapper() });
+    expect(result.current.currentUser?.role).toBe('buyer');
+
+    act(() => {
+      result.current.upgradeToSeller();
+    });
+    expect(result.current.currentUser?.role).toBe('seller');
   });
 });
