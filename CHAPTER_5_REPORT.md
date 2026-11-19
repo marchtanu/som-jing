@@ -153,11 +153,14 @@ flowchart TD
 ผู้สนใจและคณะกรรมการประเมินโครงงานสามารถเข้าถึงซอร์สโค้ดและทดลองใช้งานโปรแกรมต้นแบบ **SomJing (สมจริง)** ได้ผ่านช่องทางดังต่อไปนี้
 
 * **ซอร์สโค้ดบน GitHub:** [https://github.com/marchtanu/som-jing](https://github.com/marchtanu/som-jing)
+* **ช่องทางทดลองใช้งานออนไลน์ (GitHub Pages):** [https://marchtanu.github.io/som-jing/](https://marchtanu.github.io/som-jing/)
+* **เอกสารกรณีทดสอบ (Test Cases):** [`TEST_CASES.md`](./TEST_CASES.md) (ครอบคลุม `TC-01` ถึง `TC-12` และรันทดสอบอัตโนมัติผ่านคำสั่ง `npm test`)
 * **การรันบนเครื่องท้องถิ่น (Local Development):**
   ```bash
   git clone https://github.com/marchtanu/som-jing.git
   cd som-jing
   npm install
+  npm test
   npm run dev
   ```
 * **บัญชีทดสอบสำเร็จรูป (Demo Accounts — รหัสผ่านทั้งหมดคือ `password123`):**

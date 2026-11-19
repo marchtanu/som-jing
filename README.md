@@ -55,14 +55,30 @@ npm run dev
 
 Vite serves app at `http://localhost:5173/`. Press `Ctrl + C` in terminal to stop server.
 
-### 5. Build & preview production bundle
+### 5. Run automated tests
+
+```bash
+npm test
+```
+
+Runs 12 Vitest test cases (`TC-01` to `TC-12`) covering auth, catalog, bidding, verify, wanted offers, 4-step escrow, and admin actions.
+
+### 6. Build & preview production bundle
 
 ```bash
 npm run build
 npm run preview
 ```
 
-Output lands in `dist/`. `vercel.json` included for static SPA deployment.
+Output lands in `dist/`. Deploy script included for GitHub Pages (`npm run deploy`) and `vercel.json` for Vercel.
+
+## Live Demo & Docs
+
+- GitHub Repo: `https://github.com/marchtanu/som-jing`
+- GitHub Pages URL: `https://marchtanu.github.io/som-jing/`
+- Test Cases Table: [TEST_CASES.md](./TEST_CASES.md)
+- Academic Report (Chapter 5.1 - 5.7): [CHAPTER_5_REPORT.md](./CHAPTER_5_REPORT.md)
+- Design System Spec: [design.md](./design.md)
 
 ## Demo Accounts
 
@@ -90,9 +106,5 @@ All demo accounts use password `password123`. Or use top utility bar (`Demo Role
 - React 18 + TypeScript 5
 - Vite 5 + Tailwind CSS 3
 - Lucide React
+- Vitest + React Testing Library
 - React Context + Browser `localStorage` (`somjing_prototype_v1`)
-
-## Project Docs
-
-- Academic Report (Chapter 5.1 - 5.7): [CHAPTER_5_REPORT.md](./CHAPTER_5_REPORT.md)
-- Design System Spec: [design.md](./design.md)
