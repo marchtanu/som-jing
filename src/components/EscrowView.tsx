@@ -41,25 +41,38 @@ export const EscrowView: React.FC = () => {
     setAuthModalOpen,
   } = useStore();
 
-  const [scope, setScope] = useState<'all' | 'buying' | 'selling'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'disputed' | 'done'>('all');
 
   const isAdmin = currentUser?.role === 'admin';
+  const isSeller = currentUser?.role === 'seller';
+  const isBuyer = currentUser?.role === 'buyer';
 
-  const visibleOrders = useMemo(() => {
+  const roleOrders = useMemo(() => {
     if (!currentUser) return [];
     return escrowOrders.filter((o) => {
-      if (isAdmin) {
-        if (scope === 'buying') return o.buyerId === currentUser.id;
-        if (scope === 'selling') return o.sellerId === currentUser.id;
-        return true;
-      }
-      if (scope === 'buying') return o.buyerId === currentUser.id;
-      if (scope === 'selling') return o.sellerId === currentUser.id;
-      return o.buyerId === currentUser.id || o.sellerId === currentUser.id;
+      if (isAdmin) return true;
+      if (isBuyer) return o.buyerId === currentUser.id;
+      if (isSeller) return o.sellerId === currentUser.id;
+      return false;
     });
-  }, [escrowOrders, currentUser, isAdmin, scope]);
+  }, [escrowOrders, currentUser, isAdmin, isBuyer, isSeller]);
 
-  const totalHeldAmount = visibleOrders
+  const visibleOrders = useMemo(() => {
+    return roleOrders.filter((o) => {
+      if (statusFilter === 'active') {
+        return o.status === 'held' || o.status === 'shipped' || o.status === 'received';
+      }
+      if (statusFilter === 'disputed') {
+        return o.status === 'disputed';
+      }
+      if (statusFilter === 'done') {
+        return o.status === 'released' || o.status === 'refunded';
+      }
+      return true;
+    });
+  }, [roleOrders, statusFilter]);
+
+  const totalHeldAmount = roleOrders
     .filter(
       (o) =>
         o.status === 'held' ||
@@ -69,20 +82,28 @@ export const EscrowView: React.FC = () => {
     )
     .reduce((sum, o) => sum + o.totalPaid, 0);
 
-  const totalReleasedAmount = visibleOrders
+  const totalReleasedAmount = roleOrders
     .filter((o) => o.status === 'released')
     .reduce((sum, o) => sum + o.amount, 0);
+
+  const headingTitle = isAdmin
+    ? 'ตรวจสอบธุรกรรม Escrow ทั้งระบบ'
+    : isSeller
+      ? 'รายการขาย & จัดส่ง Escrow (Seller)'
+      : 'คำสั่งซื้อ Escrow ของฉัน (Customer)';
+
+  const headingSubtitle = isAdmin
+    ? 'ติดตามยอดพักเงินและการจัดส่งทุกคำสั่งซื้อในแพลตฟอร์ม'
+    : isSeller
+      ? 'แจ้งเลขพัสดุจัดส่งสินค้าและติดตามยอดเงินที่กำลังรอผู้ซื้อยืนยันรับของ'
+      : 'ติดตามสถานะ 4 ขั้นตอน: พักเงิน → จัดส่ง → ยืนยันรับของ → ปล่อยเงิน หรือแจ้งข้อร้องเรียน';
 
   return (
     <div className="space-y-12 animate-view-in">
       <div className="pb-6 border-b border-hairline flex flex-col sm:flex-row sm:items-end justify-between gap-6">
         <div>
-          <h1 className="text-[32px] font-medium leading-[1.2] text-ink">
-            ระบบพักเงิน Escrow Tracker
-          </h1>
-          <p className="text-base text-mute mt-1">
-            วงจรคุ้มครองธุรกรรม 4 ขั้นตอน: พักเงิน → จัดส่ง (ผู้ขาย) → ยืนยันรับของ (ผู้ซื้อ) → ปล่อยเงิน
-          </p>
+          <h1 className="text-[32px] font-medium leading-[1.2] text-ink">{headingTitle}</h1>
+          <p className="text-base text-mute mt-1">{headingSubtitle}</p>
         </div>
 
         <div className="flex flex-wrap gap-8">
@@ -116,40 +137,49 @@ export const EscrowView: React.FC = () => {
         </div>
       ) : (
         <>
-          {/* Filter Tabs */}
+          {/* Role-Appropriate Status Filter Tabs */}
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => setScope('all')}
-              className={scope === 'all' ? 'filter-chip-active' : 'filter-chip'}
+              onClick={() => setStatusFilter('all')}
+              className={statusFilter === 'all' ? 'filter-chip-active' : 'filter-chip'}
             >
-              {isAdmin ? 'คำสั่งซื้อทั้งหมดในระบบ' : 'ทั้งหมดที่เกี่ยวข้องกับฉัน'}
+              ทั้งหมด ({roleOrders.length})
             </button>
             <button
               type="button"
-              onClick={() => setScope('buying')}
-              className={scope === 'buying' ? 'filter-chip-active' : 'filter-chip'}
+              onClick={() => setStatusFilter('active')}
+              className={statusFilter === 'active' ? 'filter-chip-active' : 'filter-chip'}
             >
-              รายการที่ฉันซื้อ (Buying)
+              {isSeller ? 'รอจัดส่ง / รอผู้ซื้อรับของ' : 'กำลังดำเนินการ'}
             </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setStatusFilter('disputed')}
+                className={statusFilter === 'disputed' ? 'filter-chip-active' : 'filter-chip'}
+              >
+                มีข้อร้องเรียน (Disputed)
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => setScope('selling')}
-              className={scope === 'selling' ? 'filter-chip-active' : 'filter-chip'}
+              onClick={() => setStatusFilter('done')}
+              className={statusFilter === 'done' ? 'filter-chip-active' : 'filter-chip'}
             >
-              รายการที่ฉันขาย (Selling)
+              เสร็จสมบูรณ์ (Released / Refunded)
             </button>
           </div>
 
           {visibleOrders.length === 0 ? (
             <div className="bg-soft-cloud p-12 text-center space-y-4">
-              <p className="text-base font-medium text-ink">ยังไม่มีคำสั่งซื้อในหมวดนี้</p>
+              <p className="text-base font-medium text-ink">ยังไม่มีรายการในหมวดนี้</p>
               <button
                 type="button"
-                onClick={() => setActiveTab('catalog')}
+                onClick={() => setActiveTab(isAdmin ? 'admin' : 'catalog')}
                 className="btn-primary"
               >
-                เลือกสินค้าเพื่อสั่งซื้อผ่าน Escrow
+                {isAdmin ? 'กลับไปหน้า Admin Console' : 'กลับหน้ารวมสินค้า'}
               </button>
             </div>
           ) : (

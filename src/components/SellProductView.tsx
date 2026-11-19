@@ -33,7 +33,14 @@ const PRESET_IMAGES: { label: string; url: string; secondaryUrl: string; categor
 ];
 
 export const SellProductView: React.FC = () => {
-  const { createProduct, products, currentUser, setActiveTab, setSelectedProductId } = useStore();
+  const {
+    createProduct,
+    products,
+    currentUser,
+    setActiveTab,
+    setSelectedProductId,
+    setAuthModalOpen,
+  } = useStore();
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<ProductCategory>('art-toys');
@@ -139,6 +146,27 @@ export const SellProductView: React.FC = () => {
   const myListings = products.filter((p) =>
     currentUser ? p.sellerId === currentUser.id : true
   );
+
+  if (currentUser?.role !== 'seller') {
+    return (
+      <div className="bg-soft-cloud border border-hairline p-12 text-center space-y-4 max-w-xl mx-auto my-8 animate-view-in">
+        <h1 className="text-2xl font-medium text-ink">
+          สำหรับบัญชีผู้ขายเท่านั้น (Seller Account Only)
+        </h1>
+        <p className="text-sm text-charcoal leading-relaxed">
+          บัญชีลูกค้า (Customer) และผู้ดูแลระบบ (Admin) ไม่สามารถลงประกาศขายสินค้าได้
+          หากต้องการลงขายสินค้ากรุณาออกจากระบบและเข้าสู่ระบบด้วยบัญชีผู้ขาย (`seller@somjing.com`)
+        </p>
+        <button
+          type="button"
+          onClick={() => setAuthModalOpen(true)}
+          className="btn-primary h-11 px-6 text-sm"
+        >
+          เปิดหน้าจัดการบัญชี / Sign In
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-12 animate-view-in">

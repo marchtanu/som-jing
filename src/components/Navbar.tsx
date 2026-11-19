@@ -28,18 +28,24 @@ export const Navbar: React.FC = () => {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const isAdmin = currentUser?.role === 'admin';
+  const role = currentUser?.role ?? 'guest';
+  const isBuyer = role === 'buyer';
+  const isSeller = role === 'seller';
+  const isAdmin = role === 'admin';
+
   const pendingVerifyCount = verificationRequests.filter((r) => r.status === 'pending').length;
   const pendingComplaintCount = complaints.filter((c) => c.status === 'pending').length;
   const adminBadgeCount = pendingVerifyCount + pendingComplaintCount;
 
   const myActiveEscrowCount = currentUser
-    ? escrowOrders.filter(
-        (o) =>
-          o.status !== 'released' &&
-          o.status !== 'refunded' &&
-          (isAdmin || o.buyerId === currentUser.id || o.sellerId === currentUser.id)
-      ).length
+    ? escrowOrders.filter((o) => {
+        const isActive = o.status !== 'released' && o.status !== 'refunded';
+        if (!isActive) return false;
+        if (isAdmin) return true;
+        if (isBuyer) return o.buyerId === currentUser.id;
+        if (isSeller) return o.sellerId === currentUser.id;
+        return false;
+      }).length
     : 0;
   const openWantedCount = wantedListings.filter((w) => w.status === 'open').length;
 
@@ -47,21 +53,41 @@ export const Navbar: React.FC = () => {
     id: ActiveTab;
     label: string;
     badge?: number;
-  }[] = [
-    { id: 'catalog', label: 'Explore & Auctions' },
-    ...(!isAdmin
-      ? [
-          { id: 'sell' as ActiveTab, label: 'ลงขายสินค้า' },
-          { id: 'verify' as ActiveTab, label: 'ขอ Verify' },
-          { id: 'wanted' as ActiveTab, label: 'Wanted', badge: openWantedCount },
-        ]
-      : []),
-    { id: 'escrow', label: 'Escrow', badge: myActiveEscrowCount },
-    ...(isAdmin
-      ? [{ id: 'admin' as ActiveTab, label: 'Admin Console', badge: adminBadgeCount }]
-      : []),
-    { id: 'report', label: 'บทที่ 5' },
-  ];
+  }[] = (() => {
+    if (isAdmin) {
+      return [
+        { id: 'admin', label: 'Admin Console', badge: adminBadgeCount },
+        { id: 'catalog', label: 'Explore & Auctions' },
+        { id: 'wanted', label: 'Wanted', badge: openWantedCount },
+        { id: 'escrow', label: 'Escrow ทั้งระบบ', badge: myActiveEscrowCount },
+        { id: 'report', label: 'บทที่ 5' },
+      ];
+    }
+    if (isSeller) {
+      return [
+        { id: 'catalog', label: 'Explore & Auctions' },
+        { id: 'sell', label: 'ลงขายสินค้า' },
+        { id: 'verify', label: 'ขอ Verify' },
+        { id: 'wanted', label: 'Wanted (เสนอขาย)', badge: openWantedCount },
+        { id: 'escrow', label: 'รายการขาย Escrow', badge: myActiveEscrowCount },
+        { id: 'report', label: 'บทที่ 5' },
+      ];
+    }
+    if (isBuyer) {
+      return [
+        { id: 'catalog', label: 'Explore & Auctions' },
+        { id: 'wanted', label: 'Wanted', badge: openWantedCount },
+        { id: 'escrow', label: 'คำสั่งซื้อ Escrow', badge: myActiveEscrowCount },
+        { id: 'report', label: 'บทที่ 5' },
+      ];
+    }
+    // Guest
+    return [
+      { id: 'catalog', label: 'Explore & Auctions' },
+      { id: 'wanted', label: 'Wanted', badge: openWantedCount },
+      { id: 'report', label: 'บทที่ 5' },
+    ];
+  })();
 
   const handleSelectTab = (tab: ActiveTab) => {
     setSelectedProductId(null);
@@ -70,11 +96,7 @@ export const Navbar: React.FC = () => {
   };
 
   const roleBadgeLabel =
-    currentUser?.role === 'admin'
-      ? 'Admin'
-      : currentUser?.role === 'seller'
-        ? 'Seller'
-        : 'Customer';
+    isAdmin ? 'Admin' : isSeller ? 'Seller' : 'Customer';
 
   return (
     <header className="sticky top-0 z-40 bg-canvas">
@@ -82,7 +104,11 @@ export const Navbar: React.FC = () => {
       <div className="bg-soft-cloud text-ink text-xs font-medium h-9">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-8 xl:px-14 h-full flex items-center justify-between gap-4">
           <p className="hidden md:block text-mute truncate">
-            SomJing Authenticity Guarantee · 100% Escrow Protected Transactions
+            {isAdmin
+              ? 'SomJing Trust & Verification Center · Administrator Workspace'
+              : isSeller
+                ? 'SomJing Seller Hub · ตรวจรับรองความแท้ & รับเงินปลอดภัยผ่าน Escrow'
+                : 'SomJing Authenticity Guarantee · 100% Escrow Protected Transactions'}
           </p>
 
           <div className="flex items-center gap-3 ml-auto text-xs font-medium text-ink">
@@ -99,7 +125,7 @@ export const Navbar: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setAuthModalOpen(true)}
-                  className="hover:underline underline-offset-4 truncate max-w-[180px]"
+                  className="hover:underline underline-offset-4 truncate max-w-[200px]"
                 >
                   {currentUser.name} ({roleBadgeLabel})
                 </button>
@@ -145,7 +171,7 @@ export const Navbar: React.FC = () => {
           {/* Left: Brand Emblem */}
           <button
             type="button"
-            onClick={() => handleSelectTab('catalog')}
+            onClick={() => handleSelectTab(isAdmin ? 'admin' : 'catalog')}
             className="flex items-center gap-2.5 shrink-0"
           >
             <svg
@@ -167,7 +193,7 @@ export const Navbar: React.FC = () => {
             </span>
           </button>
 
-          {/* Center: Role-Filtered Nav Links */}
+          {/* Center: Role-Specific Nav Links */}
           <nav className="hidden lg:flex items-center justify-center gap-6 h-full">
             {navItems.map((item) => {
               const active = activeTab === item.id;
@@ -194,37 +220,41 @@ export const Navbar: React.FC = () => {
             })}
           </nav>
 
-          {/* Right: Circular Utility Icon Buttons */}
+          {/* Right: Role-Fitted Circular Icon Buttons */}
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => handleSelectTab('catalog')}
-              className="btn-icon-circular relative"
-              title="รายการที่บันทึกไว้ (Watchlist)"
-              aria-label="รายการที่บันทึกไว้"
-            >
-              <Heart className="w-5 h-5" />
-              {watchlistIds.length > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-ink text-canvas text-[10px] font-mono flex items-center justify-center">
-                  {watchlistIds.length}
-                </span>
-              )}
-            </button>
+            {(isBuyer || role === 'guest') && (
+              <button
+                type="button"
+                onClick={() => handleSelectTab('catalog')}
+                className="btn-icon-circular relative"
+                title="รายการที่บันทึกไว้ (Watchlist)"
+                aria-label="รายการที่บันทึกไว้"
+              >
+                <Heart className="w-5 h-5" />
+                {watchlistIds.length > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-ink text-canvas text-[10px] font-mono flex items-center justify-center">
+                    {watchlistIds.length}
+                  </span>
+                )}
+              </button>
+            )}
 
-            <button
-              type="button"
-              onClick={() => handleSelectTab('escrow')}
-              className="btn-icon-circular relative"
-              title="คำสั่งซื้อ Escrow"
-              aria-label="คำสั่งซื้อ Escrow"
-            >
-              <ShoppingBag className="w-5 h-5" />
-              {myActiveEscrowCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-ink text-canvas text-[10px] font-mono flex items-center justify-center">
-                  {myActiveEscrowCount}
-                </span>
-              )}
-            </button>
+            {currentUser && (
+              <button
+                type="button"
+                onClick={() => handleSelectTab('escrow')}
+                className="btn-icon-circular relative"
+                title={isSeller ? 'รายการขาย Escrow' : isAdmin ? 'Escrow ทั้งระบบ' : 'คำสั่งซื้อ Escrow'}
+                aria-label="คำสั่งซื้อ Escrow"
+              >
+                <ShoppingBag className="w-5 h-5" />
+                {myActiveEscrowCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-ink text-canvas text-[10px] font-mono flex items-center justify-center">
+                    {myActiveEscrowCount}
+                  </span>
+                )}
+              </button>
+            )}
 
             {isAdmin && (
               <button
@@ -314,7 +344,7 @@ export const Navbar: React.FC = () => {
                     }}
                     className="btn-secondary w-full h-10 text-sm"
                   >
-                    จัดการบัญชี / เปลี่ยนผู้ใช้
+                    จัดการบัญชี / ออกจากระบบ
                   </button>
                 </div>
               ) : (

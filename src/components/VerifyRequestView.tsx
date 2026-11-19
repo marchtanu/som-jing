@@ -6,7 +6,13 @@ import { CATEGORY_LABELS, formatThaiDateTime } from '../utils/format';
 import { SafeImage, VerificationBadge } from './ui';
 
 export const VerifyRequestView: React.FC = () => {
-  const { products, verificationRequests, submitVerificationRequest, currentUser } = useStore();
+  const {
+    products,
+    verificationRequests,
+    submitVerificationRequest,
+    currentUser,
+    setAuthModalOpen,
+  } = useStore();
 
   const eligibleProducts = products.filter(
     (p) =>
@@ -60,6 +66,29 @@ export const VerifyRequestView: React.FC = () => {
       setCustomTitle('');
     }
   };
+
+  if (currentUser?.role !== 'seller') {
+    return (
+      <div className="bg-soft-cloud border border-hairline p-12 text-center space-y-4 max-w-xl mx-auto my-8 animate-view-in">
+        <h1 className="text-2xl font-medium text-ink">
+          สำหรับบัญชีผู้ขายเท่านั้น (Seller Account Only)
+        </h1>
+        <p className="text-sm text-charcoal leading-relaxed">
+          เฉพาะผู้ขายเท่านั้นที่สามารถส่งคำขอตรวจรับรองความแท้ (Verify) ให้สินค้าของตนเองได้
+          กรุณาเข้าสู่ระบบด้วยบัญชีผู้ขาย (`seller@somjing.com`)
+        </p>
+        <button
+          type="button"
+          onClick={() => setAuthModalOpen(true)}
+          className="btn-primary h-11 px-6 text-sm"
+        >
+          เปิดหน้าจัดการบัญชี / Sign In
+        </button>
+      </div>
+    );
+  }
+
+  const myRequests = verificationRequests.filter((r) => r.sellerId === currentUser.id);
 
   return (
     <div className="space-y-12 animate-view-in">
@@ -216,11 +245,11 @@ export const VerifyRequestView: React.FC = () => {
 
         <div className="lg:col-span-7 space-y-4">
           <h2 className="text-xl font-medium text-ink">
-            รายการคำขอ Verify ({verificationRequests.length})
+            คำขอ Verify ของฉัน ({myRequests.length})
           </h2>
 
           <div className="divide-y divide-hairline border-t border-b border-hairline">
-            {verificationRequests.map((req) => (
+            {myRequests.map((req) => (
               <div key={req.id} className="py-6 flex flex-col sm:flex-row gap-5">
                 <SafeImage
                   src={req.productImage}

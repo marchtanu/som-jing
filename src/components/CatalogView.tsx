@@ -14,6 +14,7 @@ import { SafeImage } from './ui';
 export const CatalogView: React.FC = () => {
   const {
     products,
+    currentUser,
     watchlistIds,
     toggleWatchlist,
     getSelectedOptionForProduct,
@@ -21,6 +22,10 @@ export const CatalogView: React.FC = () => {
     setSelectedProductId,
     setActiveTab,
   } = useStore();
+
+  const isSeller = currentUser?.role === 'seller';
+  const isAdmin = currentUser?.role === 'admin';
+  const canSaveWatchlist = !isSeller && !isAdmin;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory | 'all'>('all');
@@ -96,27 +101,63 @@ export const CatalogView: React.FC = () => {
             และพักเงินตัวกลาง 4 ขั้นตอนจนกว่าจะรับของจริง
           </p>
           <div className="flex flex-wrap gap-3 pt-1">
-            <button
-              type="button"
-              onClick={() => setActiveTab('wanted')}
-              className="btn-outline-on-image"
-            >
-              <span>เปิดกระดาน Wanted</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('sell')}
-              className="btn-outline-on-image"
-            >
-              <span>ลงขายสินค้า</span>
-            </button>
+            {isAdmin ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('admin')}
+                  className="btn-outline-on-image"
+                >
+                  <span>เปิด Admin Console</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('escrow')}
+                  className="btn-outline-on-image"
+                >
+                  <span>ดู Escrow ทั้งระบบ</span>
+                </button>
+              </>
+            ) : isSeller ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('sell')}
+                  className="btn-outline-on-image"
+                >
+                  <span>ลงขายสินค้าใหม่</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('verify')}
+                  className="btn-outline-on-image"
+                >
+                  <span>ส่งคำขอ Verify</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('wanted')}
+                  className="btn-outline-on-image"
+                >
+                  <span>เปิดกระดาน Wanted</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <a href="#catalog-grid" className="btn-outline-on-image">
+                  <span>ดูรายการประมูลสด</span>
+                </a>
+              </>
+            )}
           </div>
         </div>
       </section>
 
       {/* PLP Sub-Nav Strip */}
-      <section className="space-y-6">
+      <section id="catalog-grid" className="space-y-6">
         <div className="bg-canvas shadow-inset-hairline pb-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-mute">
@@ -139,14 +180,16 @@ export const CatalogView: React.FC = () => {
               />
             </div>
 
-            <button
-              type="button"
-              onClick={() => setOnlySaved((v) => !v)}
-              className={onlySaved ? 'filter-chip-active' : 'filter-chip'}
-            >
-              <Heart className={`w-4 h-4 ${onlySaved ? 'fill-current' : ''}`} />
-              <span>Saved ({watchlistIds.length})</span>
-            </button>
+            {canSaveWatchlist && (
+              <button
+                type="button"
+                onClick={() => setOnlySaved((v) => !v)}
+                className={onlySaved ? 'filter-chip-active' : 'filter-chip'}
+              >
+                <Heart className={`w-4 h-4 ${onlySaved ? 'fill-current' : ''}`} />
+                <span>Saved ({watchlistIds.length})</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -241,7 +284,9 @@ export const CatalogView: React.FC = () => {
               </div>
 
               <div className="pb-6 border-b border-hairline space-y-3">
-                <h3 className="text-base font-medium text-ink">การรับรอง &amp; รายการโปรด</h3>
+                <h3 className="text-base font-medium text-ink">
+                  {canSaveWatchlist ? 'การรับรอง & รายการโปรด' : 'การรับรองความแท้'}
+                </h3>
                 <div className="flex flex-col items-start gap-2">
                   <button
                     type="button"
@@ -251,14 +296,16 @@ export const CatalogView: React.FC = () => {
                     <ShieldCheck className="w-4 h-4" />
                     <span>Verified Only</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setOnlySaved((v) => !v)}
-                    className={onlySaved ? 'filter-chip-active' : 'filter-chip'}
-                  >
-                    <Heart className={`w-4 h-4 ${onlySaved ? 'fill-current' : ''}`} />
-                    <span>Saved ({watchlistIds.length})</span>
-                  </button>
+                  {canSaveWatchlist && (
+                    <button
+                      type="button"
+                      onClick={() => setOnlySaved((v) => !v)}
+                      className={onlySaved ? 'filter-chip-active' : 'filter-chip'}
+                    >
+                      <Heart className={`w-4 h-4 ${onlySaved ? 'fill-current' : ''}`} />
+                      <span>Saved ({watchlistIds.length})</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </aside>
@@ -306,6 +353,7 @@ export const CatalogView: React.FC = () => {
                       activeOptionLabel={activeOption.label}
                       activeImageIndex={activeOption.imageIndex}
                       isSaved={watchlistIds.includes(product.id)}
+                      showHeart={canSaveWatchlist}
                       nowMs={nowMs}
                       onToggleSave={() => toggleWatchlist(product.id)}
                       onSelectOption={(optionId) =>
@@ -330,6 +378,7 @@ const ProductCard: React.FC<{
   activeOptionLabel: string;
   activeImageIndex: number;
   isSaved: boolean;
+  showHeart: boolean;
   nowMs: number;
   onToggleSave: () => void;
   onSelectOption: (optionId: string) => void;
@@ -340,6 +389,7 @@ const ProductCard: React.FC<{
   activeOptionLabel,
   activeImageIndex,
   isSaved,
+  showHeart,
   nowMs,
   onToggleSave,
   onSelectOption,
@@ -375,18 +425,20 @@ const ProductCard: React.FC<{
           )}
         </div>
 
-        {/* Watchlist Heart Toggle Top-Right */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleSave();
-          }}
-          aria-label={isSaved ? 'นำออกจากรายการโปรด' : 'บันทึกในรายการโปรด'}
-          className="btn-icon-circular absolute top-3 right-3 bg-canvas/90 hover:bg-canvas"
-        >
-          <Heart className={`w-4 h-4 ${isSaved ? 'fill-sale text-sale' : 'text-ink'}`} />
-        </button>
+        {/* Watchlist Heart Toggle Top-Right (Buyer/Guest only) */}
+        {showHeart && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleSave();
+            }}
+            aria-label={isSaved ? 'นำออกจากรายการโปรด' : 'บันทึกในรายการโปรด'}
+            className="btn-icon-circular absolute top-3 right-3 bg-canvas/90 hover:bg-canvas"
+          >
+            <Heart className={`w-4 h-4 ${isSaved ? 'fill-sale text-sale' : 'text-ink'}`} />
+          </button>
+        )}
 
         {product.status === 'sold' && (
           <div className="absolute inset-0 bg-ink/55 flex items-center justify-center">

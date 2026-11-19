@@ -78,34 +78,53 @@ const MainShell: React.FC = () => {
                     Wanted Listing Board
                   </button>
                 </li>
-                <li>
-                  <button type="button" onClick={() => navigateFooter('sell')} className="hover:text-ink">
-                    ลงขายสินค้า / เปิดรอบประมูล
-                  </button>
-                </li>
+                {currentUser?.role === 'seller' && (
+                  <li>
+                    <button type="button" onClick={() => navigateFooter('sell')} className="hover:text-ink">
+                      ลงขายสินค้า / เปิดรอบประมูล
+                    </button>
+                  </li>
+                )}
               </ul>
             </div>
 
             <div className="space-y-3">
               <h3 className="text-base font-medium text-ink">Help &amp; Escrow</h3>
               <ul className="space-y-2.5 text-sm font-medium text-mute">
-                <li>
-                  <button type="button" onClick={() => navigateFooter('escrow')} className="hover:text-ink">
-                    ติดตามสถานะ Escrow 4 ขั้นตอน
-                  </button>
-                </li>
-                <li>
-                  <button type="button" onClick={() => navigateFooter('verify')} className="hover:text-ink">
-                    ขอรับรองความแท้ (Verify)
-                  </button>
-                </li>
-                {currentUser?.role === 'admin' && (
+                {currentUser && (
                   <li>
-                    <button type="button" onClick={() => navigateFooter('admin')} className="hover:text-ink">
-                      ศูนย์จัดการข้อร้องเรียนแอดมิน
+                    <button type="button" onClick={() => navigateFooter('escrow')} className="hover:text-ink">
+                      {currentUser.role === 'seller'
+                        ? 'รายการขาย & จัดส่ง Escrow'
+                        : currentUser.role === 'admin'
+                          ? 'ตรวจสอบ Escrow ทั้งระบบ'
+                          : 'ติดตามคำสั่งซื้อ Escrow 4 ขั้นตอน'}
                     </button>
                   </li>
                 )}
+                {currentUser?.role === 'seller' && (
+                  <li>
+                    <button type="button" onClick={() => navigateFooter('verify')} className="hover:text-ink">
+                      ขอรับรองความแท้ (Verify)
+                    </button>
+                  </li>
+                )}
+                {currentUser?.role === 'admin' && (
+                  <li>
+                    <button type="button" onClick={() => navigateFooter('admin')} className="hover:text-ink">
+                      ศูนย์จัดการ Verify &amp; ข้อร้องเรียนแอดมิน
+                    </button>
+                  </li>
+                )}
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setPolicyModalTopic('escrow')}
+                    className="hover:text-ink"
+                  >
+                    คู่มือการทำงานระบบ Escrow
+                  </button>
+                </li>
               </ul>
             </div>
 

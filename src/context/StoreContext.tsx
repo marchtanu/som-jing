@@ -225,6 +225,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setAuthModalOpen(true);
       return;
     }
+    if ((tab === 'sell' || tab === 'verify') && currentUser?.role !== 'seller') {
+      pushToast(
+        'error',
+        'เฉพาะบัญชีผู้ขาย (Seller Only)',
+        'บัญชีผู้ซื้อและแอดมินไม่สามารถลงขายหรือยื่นขอ Verify ได้ กรุณาเข้าสู่ระบบด้วยบัญชีผู้ขาย'
+      );
+      if (!currentUser) {
+        setAuthModalOpen(true);
+      }
+      return;
+    }
+    if (tab === 'escrow' && !currentUser) {
+      pushToast('info', 'กรุณาเข้าสู่ระบบ', 'เข้าสู่ระบบเพื่อดูคำสั่งซื้อหรือรายการขาย Escrow ของคุณ');
+      setAuthModalOpen(true);
+      return;
+    }
     setActiveTabState(tab);
   };
 
@@ -249,7 +265,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     setState((prev) => ({ ...prev, currentUserId: found.id }));
     setAuthModalOpen(false);
-    if (activeTab === 'admin' && found.role !== 'admin') {
+    if (found.role === 'admin') {
+      setActiveTabState('admin');
+    } else if (found.role === 'buyer' && (activeTab === 'admin' || activeTab === 'sell' || activeTab === 'verify')) {
+      setActiveTabState('catalog');
+    } else if (found.role === 'seller' && activeTab === 'admin') {
       setActiveTabState('catalog');
     }
     pushToast('success', `เข้าสู่ระบบสำเร็จ: ${found.name}`);
@@ -302,7 +322,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const logoutUser = () => {
     setState((prev) => ({ ...prev, currentUserId: null }));
-    if (activeTab === 'admin') {
+    if (activeTab === 'admin' || activeTab === 'sell' || activeTab === 'verify' || activeTab === 'escrow') {
       setActiveTabState('catalog');
     }
     pushToast('info', 'ออกจากระบบแล้ว', 'กรุณาเข้าสู่ระบบเพื่อใช้งานต่อ');
@@ -353,10 +373,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setAuthModalOpen(true);
       return { ok: false, error: 'กรุณาเข้าสู่ระบบก่อนทำการบิดประมูล' };
     }
-    if (currentUser.role === 'admin') {
+    if (currentUser.role !== 'buyer') {
       return {
         ok: false,
-        error: 'บัญชีผู้ดูแลระบบ (Admin) ไม่สามารถเข้าร่วมบิดประมูลได้เพื่อความเป็นกลาง',
+        error:
+          currentUser.role === 'admin'
+            ? 'บัญชีผู้ดูแลระบบ (Admin) ไม่สามารถเข้าร่วมบิดประมูลได้เพื่อความเป็นกลาง'
+            : 'บัญชีผู้ขาย (Seller) ไม่สามารถบิดประมูลสินค้าได้ กรุณาใช้บัญชีผู้ซื้อ (Customer)',
       };
     }
     const product = state.products.find((p) => p.id === productId);

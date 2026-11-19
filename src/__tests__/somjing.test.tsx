@@ -52,26 +52,42 @@ describe('SomJing (สมจริง) E-Commerce Prototype Test Suite (TC-01 to
     expect(result.current.currentUser?.role).toBe('buyer');
   });
 
-  it('TC-02: enforces real authentication and hides admin console from non-admin users', () => {
+  it('TC-02: enforces strict role-based tab guards for buyer, seller, and admin', () => {
     const { result } = renderHook(() => useStore(), { wrapper: createWrapper() });
 
-    // Buyer cannot switch directly to admin tab
+    // Buyer cannot access sell, verify, or admin tabs
     expect(result.current.currentUser?.role).toBe('buyer');
     act(() => {
       result.current.setActiveTab('admin');
+      result.current.setActiveTab('sell');
+      result.current.setActiveTab('verify');
     });
     expect(result.current.activeTab).toBe('catalog');
 
-    // Logging in as Admin unlocks Admin tab
+    // Logging in as Seller allows sell & verify, blocks admin
+    act(() => {
+      result.current.loginUser('seller@somjing.com', 'password123');
+    });
+    expect(result.current.currentUser?.role).toBe('seller');
+    act(() => {
+      result.current.setActiveTab('sell');
+    });
+    expect(result.current.activeTab).toBe('sell');
+    act(() => {
+      result.current.setActiveTab('admin');
+    });
+    expect(result.current.activeTab).toBe('sell');
+
+    // Logging in as Admin unlocks Admin tab and blocks sell
     let loginRes: { ok: boolean; error?: string } = { ok: false };
     act(() => {
       loginRes = result.current.loginUser('admin@somjing.com', 'password123');
     });
     expect(loginRes.ok).toBe(true);
     expect(result.current.currentUser?.role).toBe('admin');
-
+    expect(result.current.activeTab).toBe('admin');
     act(() => {
-      result.current.setActiveTab('admin');
+      result.current.setActiveTab('sell');
     });
     expect(result.current.activeTab).toBe('admin');
   });
@@ -426,5 +442,43 @@ describe('SomJing (สมจริง) E-Commerce Prototype Test Suite (TC-01 to
       result.current.toggleWatchlist('prod-3');
     });
     expect(result.current.watchlistIds.includes('prod-3')).toBe(false);
+  });
+
+  it('TC-14: renders strictly role-appropriate Navbar items across Buyer, Seller, and Admin', () => {
+    const { unmount } = render(<App />);
+
+    // Default signed-in Buyer sees Explore, Wanted, คำสั่งซื้อ Escrow, บทที่ 5; no ลงขายสินค้า / Admin Console
+    const nav = screen.getByRole('navigation');
+    expect(nav).toHaveTextContent('Explore & Auctions');
+    expect(nav).toHaveTextContent('Wanted');
+    expect(nav).toHaveTextContent('คำสั่งซื้อ Escrow');
+    expect(nav).toHaveTextContent('บทที่ 5');
+    expect(nav).not.toHaveTextContent('ลงขายสินค้า');
+    expect(nav).not.toHaveTextContent('ขอ Verify');
+    expect(nav).not.toHaveTextContent('Admin Console');
+
+    // Sign out and sign in as Seller via real UI flow
+    fireEvent.click(screen.getByLabelText('Sign Out'));
+    fireEvent.click(screen.getByText(/Join Us \/ Sign In/i));
+    fireEvent.click(screen.getByText(/ผู้ขาย \(seller@somjing\.com\)/i));
+    fireEvent.click(screen.getByRole('button', { name: /^Sign In$/i }));
+
+    expect(nav).toHaveTextContent('ลงขายสินค้า');
+    expect(nav).toHaveTextContent('ขอ Verify');
+    expect(nav).toHaveTextContent('รายการขาย Escrow');
+    expect(nav).not.toHaveTextContent('Admin Console');
+
+    // Sign out and sign in as Admin via real UI flow
+    fireEvent.click(screen.getByLabelText('Sign Out'));
+    fireEvent.click(screen.getByText(/Join Us \/ Sign In/i));
+    fireEvent.click(screen.getByText(/แอดมิน \(admin@somjing\.com\)/i));
+    fireEvent.click(screen.getByRole('button', { name: /^Sign In$/i }));
+
+    expect(nav).toHaveTextContent('Admin Console');
+    expect(nav).toHaveTextContent('Escrow ทั้งระบบ');
+    expect(nav).not.toHaveTextContent('ลงขายสินค้า');
+    expect(nav).not.toHaveTextContent('ขอ Verify');
+
+    unmount();
   });
 });

@@ -35,6 +35,8 @@ export const WantedBoardView: React.FC = () => {
   );
 
   const isAdmin = currentUser?.role === 'admin';
+  const isSeller = currentUser?.role === 'seller';
+  const isBuyer = currentUser?.role === 'buyer';
 
   const handleCreateWanted = (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,7 +112,7 @@ export const WantedBoardView: React.FC = () => {
             สร้างประกาศตามหาของสะสมพร้อมงบประมาณ → ผู้ขายยื่นข้อเสนอ → เจ้าของประกาศเลือกข้อเสนอและชำระเข้า Escrow
           </p>
         </div>
-        {!isAdmin && (
+        {!isAdmin && !isSeller && (
           <button
             type="button"
             onClick={() => {
@@ -236,8 +238,8 @@ export const WantedBoardView: React.FC = () => {
       {/* Wanted Listings Feed */}
       <div className="divide-y divide-hairline border-b border-hairline">
         {wantedListings.map((listing) => {
-          const isOwner = currentUser?.id === listing.buyerId;
-          const canOffer = listing.status === 'open' && !isOwner && !isAdmin;
+          const isOwner = isBuyer && currentUser?.id === listing.buyerId;
+          const canOffer = listing.status === 'open' && isSeller;
 
           return (
             <section key={listing.id} className="py-8 first:pt-0 space-y-6">
