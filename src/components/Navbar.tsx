@@ -11,6 +11,8 @@ import {
 import { useStore } from '../context/StoreContext';
 import { ActiveTab } from '../types';
 
+const somJingIconUrl = new URL('../assets/somjing-icon.svg', import.meta.url).href;
+
 export const Navbar: React.FC = () => {
   const {
     currentUser,
@@ -170,20 +172,7 @@ export const Navbar: React.FC = () => {
             onClick={() => handleSelectTab(isAdmin ? 'admin' : 'catalog')}
             className="flex items-center gap-2.5 shrink-0"
           >
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 32 32"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              aria-hidden="true"
-            >
-              <rect width="32" height="32" fill="#111111" />
-              <path
-                d="M9 19.5L13.8 11H18.5L13.7 19.5H9ZM14.8 21L19.6 12.5H23L18.2 21H14.8Z"
-                fill="#FFFFFF"
-              />
-            </svg>
+            <img src={somJingIconUrl} alt="" width="32" height="32" />
             <span className="font-display text-2xl tracking-wide text-ink leading-none pt-0.5">
               SOMJING
             </span>
