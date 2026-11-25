@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { buildSeedData } from '../data/seedData';
+import { formatTHB } from '../utils/format';
+import { getSellerCommissionRate, getSellerSettlement } from '../utils/sellerCommission';
 import {
   ActiveTab,
   Complaint,
@@ -134,8 +136,7 @@ interface StoreContextValue {
     wantedId: string;
     price: number;
     condition: string;
-    isVerifiedItem: boolean;
-    certificateId?: string;
+    productId?: string;
     message: string;
     image: string;
   }) => { ok: boolean; error?: string };
@@ -178,8 +179,17 @@ function loadInitialState(): PersistedState {
     if (raw) {
       const parsed = JSON.parse(raw) as PersistedState;
       if (parsed && Array.isArray(parsed.products) && Array.isArray(parsed.users)) {
+        const normalizedOrders = Array.isArray(parsed.escrowOrders)
+          ? parsed.escrowOrders.map((order) => ({
+              ...order,
+              sellerCommissionRate:
+                order.sellerCommissionRate ?? getSellerCommissionRate(order.isVerifiedItem),
+              totalPaid: order.amount,
+            }))
+          : [];
         return {
           ...parsed,
+          escrowOrders: normalizedOrders,
           watchlistIds: Array.isArray(parsed.watchlistIds) ? parsed.watchlistIds : ['prod-1'],
           selectedOptionByProduct: parsed.selectedOptionByProduct ?? {},
         };
@@ -707,25 +717,45 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return { ok: false, error: 'บัญชี Admin ไม่สามารถส่งข้อเสนอขายได้' };
     }
     const listing = state.wantedListings.find((w) => w.id === input.wantedId);
-    if (listing && listing.buyerId === currentUser.id) {
+    if (!listing || listing.status !== 'open') {
+      const msg = 'ประกาศนี้ปิดรับข้อเสนอแล้ว';
+      pushToast('error', msg);
+      return { ok: false, error: msg };
+    }
+    if (listing.buyerId === currentUser.id) {
       pushToast('error', 'ไม่สามารถส่งข้อเสนอในประกาศของตนเองได้');
       return { ok: false, error: 'ไม่สามารถส่งข้อเสนอในประกาศของตนเองได้' };
+    }
+
+    const verifiedProduct = input.productId
+      ? state.products.find((product) =>
+          product.id === input.productId &&
+          product.sellerId === currentUser.id &&
+          product.category === listing.category &&
+          product.status === 'active' &&
+          product.verificationStatus === 'verified' &&
+          product.certificateId
+        )
+      : undefined;
+    if (input.productId && !verifiedProduct) {
+      const msg = 'เลือกสินค้าของคุณที่ผ่านการตรวจและยังเปิดขายในหมวดนี้';
+      pushToast('error', msg);
+      return { ok: false, error: msg };
     }
 
     const newOffer = {
       id: `offer-${Date.now()}`,
       wantedId: input.wantedId,
+      productId: verifiedProduct?.id,
       sellerId: currentUser.id,
       sellerName: currentUser.name,
       price: input.price,
-      condition: input.condition,
-      isVerifiedItem: input.isVerifiedItem,
-      certificateId: input.isVerifiedItem
-        ? input.certificateId || `SJ-CERT-2026-${Math.floor(1000 + Math.random() * 8999)}`
-        : undefined,
+      condition: verifiedProduct?.condition ?? input.condition,
+      isVerifiedItem: Boolean(verifiedProduct),
+      certificateId: verifiedProduct?.certificateId,
       message: input.message,
       image:
-        input.image ||
+        verifiedProduct?.images[0] || input.image ||
         'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=900&q=80',
       createdAt: new Date().toISOString(),
       status: 'pending' as const,
@@ -752,8 +782,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   ): EscrowOrder => {
     const buyer = currentUser ?? state.users[0];
     const nowIso = new Date().toISOString();
-    const escrowFee = Math.round(target.amount * 0.02);
-    const totalPaid = target.amount + escrowFee;
+    const sellerCommissionRate = getSellerCommissionRate(target.isVerifiedItem);
+    const totalPaid = target.amount;
+    const soldProductId = target.sourceType === 'wanted_offer' ? target.wantedProductId : target.sourceId;
     const orderNumber = `SJ-ESC-${String(Date.now()).slice(-6)}`;
     const address =
       shippingAddress?.trim() ||
@@ -769,7 +800,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       productImage: target.productImage,
       selectedOptionLabel: target.selectedOptionLabel,
       amount: target.amount,
-      escrowFee,
+      sellerCommissionRate,
       totalPaid,
       paymentMethod: method,
       shippingAddress: address,
@@ -785,7 +816,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         {
           step: 'held',
           label: 'ชำระเงินจำลอง & พักเงินในระบบ Escrow',
-          detail: `ชำระผ่าน ${method} ยอดรวม ฿${totalPaid.toLocaleString('th-TH')} (รวมค่าคุ้มครอง 2%) · จัดส่งที่: ${address}`,
+          detail: `ชำระผ่าน ${method} ยอด ${formatTHB(totalPaid)} · จัดส่งที่: ${address}`,
           timestamp: nowIso,
           actor: buyer.name,
         },
@@ -796,8 +827,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ...prev,
       escrowOrders: [newOrder, ...prev.escrowOrders],
       products:
-        target.sourceType === 'auction' || target.sourceType === 'direct'
-          ? prev.products.map((p) => (p.id === target.sourceId ? { ...p, status: 'sold' } : p))
+        soldProductId
+          ? prev.products.map((p) => (p.id === soldProductId ? { ...p, status: 'sold' } : p))
           : prev.products,
       wantedListings:
         target.sourceType === 'wanted_offer' && target.wantedListingId
@@ -906,6 +937,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       pushToast('error', 'ไม่มีสิทธิ์ดำเนินการ', msg);
       return { ok: false, error: msg };
     }
+    if (order.status !== 'received') {
+      return { ok: false, error: 'ต้องยืนยันรับสินค้าก่อนปล่อยเงิน' };
+    }
     const nowIso = new Date().toISOString();
     setState((prev) => ({
       ...prev,
@@ -919,7 +953,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 {
                   step: 'released',
                   label: 'ปล่อยเงินให้ผู้ขายแล้ว (Escrow Released)',
-                  detail: `โอนยอดสุทธิ ฿${ord.amount.toLocaleString('th-TH')} เข้าบัญชีผู้ขาย ${ord.sellerName} เสร็จสมบูรณ์`,
+                  detail: `จำลองการปล่อยยอดสุทธิ ${formatTHB(getSellerSettlement(ord).payout)} ให้ผู้ขาย ${ord.sellerName}`,
                   timestamp: nowIso,
                   actor: currentUser.role === 'admin' ? currentUser.name : 'ระบบ SomJing Escrow',
                 },
@@ -931,7 +965,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     pushToast(
       'success',
       'ปล่อยเงินให้ผู้ขายสำเร็จ!',
-      `โอน ฿${order.amount.toLocaleString('th-TH')} ให้ ${order.sellerName} เรียบร้อย`
+      `ยอดสุทธิ ${formatTHB(getSellerSettlement(order).payout)} ให้ ${order.sellerName}`
     );
     return { ok: true };
   };
@@ -1037,7 +1071,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                     decision === 'resolved_refund'
                       ? 'แอดมินตัดสินคืนเงินผู้ซื้อ'
                       : 'แอดมินตัดสินปล่อยเงินให้ผู้ขาย',
-                  detail: adminNote || 'ปิดเคสข้อร้องเรียนเรียบร้อย',
+                  detail: [
+                    decision === 'resolved_refund'
+                      ? `จำลองคืนเงินให้ผู้ซื้อเต็มจำนวน ${formatTHB(ord.totalPaid)}`
+                      : `จำลองปล่อยยอดสุทธิให้ผู้ขาย ${formatTHB(getSellerSettlement(ord).payout)}`,
+                    adminNote,
+                  ].filter(Boolean).join(' · '),
                   timestamp: nowIso,
                   actor: adminName,
                 },

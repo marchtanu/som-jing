@@ -158,14 +158,14 @@ export const ReportView: React.FC = () => {
         <section className="space-y-2">
           <h2 className="text-xl font-medium text-ink">5.5 ความปลอดภัยและระบบการชำระเงิน</h2>
           <p className="text-sm text-charcoal leading-relaxed">
-            ระบบพักเงินตัวกลาง Escrow (Held → Shipped → Received → Released), การออก Certificate ID ป้องกันสินค้าปลอม และระบบระงับเงินชั่วคราว (Dispute Freeze) พร้อมบันทึก Audit Log ทุกขั้นตอน
+            ระบบพักเงินตัวกลาง Escrow (Held → Shipped → Received → Released) โดยไม่บวกค่าธรรมเนียม Escrow ฝั่งผู้ซื้อ หักค่าคอมมิชชันจากผู้ขายเมื่อปล่อยเงิน 5% (Verified) หรือ 7% (Unverified) พร้อมการออก Certificate ID และระบบระงับเงินชั่วคราว (Dispute Freeze) พร้อม Audit Log
           </p>
         </section>
 
         <section className="space-y-2">
           <h2 className="text-xl font-medium text-ink">5.6 กฎหมายและจริยธรรมที่เกี่ยวข้อง</h2>
           <p className="text-sm text-charcoal leading-relaxed">
-            สอดคล้องตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล (PDPA), พ.ร.บ. ธุรกรรมทางอิเล็กทรอนิกส์, พ.ร.บ. คุ้มครองผู้บริโภค, กฎหมายทรัพย์สินทางปัญญา และจริยธรรมแพลตฟอร์มตัวกลางที่เป็นธรรม
+            สอดคล้องตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล (PDPA), พ.ร.บ. ระบบการชำระเงิน พ.ศ. 2560, พ.ร.บ. ธุรกรรมทางอิเล็กทรอนิกส์, พ.ร.บ. คุ้มครองผู้บริโภค, กฎหมายทรัพย์สินทางปัญญา และจริยธรรมแพลตฟอร์มตัวกลางที่เป็นธรรม
           </p>
         </section>
       </div>

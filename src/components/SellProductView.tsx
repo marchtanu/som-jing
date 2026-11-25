@@ -480,7 +480,7 @@ export const SellProductView: React.FC = () => {
                   <span>ส่งคำขอตรวจรับรองความแท้ (SomJing Verified Badge) ทันที</span>
                 </p>
                 <p className="text-xs text-mute mt-0.5">
-                  ทีมตรวจสอบของระบบจะพิจารณาหลักฐานและออกเลข Certificate ID ให้เมื่อผ่านเกณฑ์
+                  ทีมตรวจสอบของระบบจะพิจารณาหลักฐานและออกเลข Certificate ID ให้เมื่อผ่านเกณฑ์ — สินค้าที่ผ่าน Verify เสียค่าคอมมิชชันผู้ขาย 5% เมื่อขายสำเร็จ (สินค้าทั่วไป 7%) ครอบคลุมบริการพักเงิน Escrow
                 </p>
               </div>
             </label>

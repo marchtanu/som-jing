@@ -8,6 +8,7 @@ import { SafeImage, VerificationBadge } from './ui';
 export const WantedBoardView: React.FC = () => {
   const {
     wantedListings,
+    products,
     createWantedListing,
     submitWantedOffer,
     setCheckoutTarget,
@@ -28,7 +29,7 @@ export const WantedBoardView: React.FC = () => {
   const [offeringForId, setOfferingForId] = useState<string | null>(null);
   const [offerPrice, setOfferPrice] = useState('');
   const [offerCondition, setOfferCondition] = useState('ของแท้สภาพ 99% ครบกล่อง');
-  const [offerVerified, setOfferVerified] = useState(true);
+  const [offerProductId, setOfferProductId] = useState('');
   const [offerMessage, setOfferMessage] = useState('');
   const [offerImage, setOfferImage] = useState(
     'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&w=900&q=80'
@@ -62,6 +63,7 @@ export const WantedBoardView: React.FC = () => {
       return;
     }
     setOfferingForId(listing.id);
+    setOfferProductId('');
     setOfferPrice(String(Math.max(500, listing.targetBudget - 500)));
     setOfferMessage(`มีสินค้าตรงรุ่นตามที่คุณ ${listing.buyerName} ตามหาครับ พร้อมส่งทันทีผ่าน Escrow`);
   };
@@ -72,7 +74,7 @@ export const WantedBoardView: React.FC = () => {
       wantedId,
       price: Math.max(100, Number(offerPrice) || 1000),
       condition: offerCondition.trim(),
-      isVerifiedItem: offerVerified,
+      productId: offerProductId || undefined,
       message: offerMessage.trim(),
       image: offerImage.trim(),
     });
@@ -86,11 +88,14 @@ export const WantedBoardView: React.FC = () => {
       setAuthModalOpen(true);
       return;
     }
+    const product = products.find((item) => item.id === offer.productId);
+    if (offer.productId && product?.status !== 'active') return;
     setCheckoutTarget({
       sourceType: 'wanted_offer',
       sourceId: offer.id,
       wantedListingId: listing.id,
-      productTitle: `${listing.title} (ข้อเสนอจาก ${offer.sellerName})`,
+      wantedProductId: product?.id,
+      productTitle: product?.title ?? `${listing.title} (ข้อเสนอจาก ${offer.sellerName})`,
       productImage: offer.image || listing.referenceImage,
       selectedOptionLabel: offer.condition,
       amount: offer.price,
@@ -240,6 +245,13 @@ export const WantedBoardView: React.FC = () => {
         {wantedListings.map((listing) => {
           const isOwner = isBuyer && currentUser?.id === listing.buyerId;
           const canOffer = listing.status === 'open' && isSeller;
+          const verifiedProducts = products.filter((product) =>
+            product.sellerId === currentUser?.id &&
+            product.category === listing.category &&
+            product.status === 'active' &&
+            product.verificationStatus === 'verified' &&
+            product.certificateId
+          );
 
           return (
             <section key={listing.id} className="py-8 first:pt-0 space-y-6">
@@ -340,8 +352,9 @@ export const WantedBoardView: React.FC = () => {
                       </label>
                       <input
                         type="text"
-                        required
+                        required={!offerProductId}
                         value={offerCondition}
+                        disabled={Boolean(offerProductId)}
                         onChange={(e) => setOfferCondition(e.target.value)}
                         className="hairline-input w-full"
                       />
@@ -353,6 +366,7 @@ export const WantedBoardView: React.FC = () => {
                       <input
                         type="url"
                         value={offerImage}
+                        disabled={Boolean(offerProductId)}
                         onChange={(e) => setOfferImage(e.target.value)}
                         className="hairline-input w-full font-mono text-xs"
                       />
@@ -367,14 +381,18 @@ export const WantedBoardView: React.FC = () => {
                       placeholder="ข้อความถึงผู้ซื้อ..."
                       className="hairline-input flex-1"
                     />
-                    <label className="inline-flex items-center gap-2 text-sm font-medium text-ink cursor-pointer shrink-0">
-                      <input
-                        type="checkbox"
-                        checked={offerVerified}
-                        onChange={(e) => setOfferVerified(e.target.checked)}
-                        className="accent-ink"
-                      />
-                      <span>แนบใบรับรอง SomJing Verified</span>
+                    <label className="flex flex-col gap-1 text-xs font-medium text-mute min-w-0">
+                      สินค้า Verified จากร้านของคุณ
+                      <select
+                        value={offerProductId}
+                        onChange={(e) => setOfferProductId(e.target.value)}
+                        className="hairline-input w-full max-w-xs text-sm"
+                      >
+                        <option value="">เสนอขายแบบ Unverified</option>
+                        {verifiedProducts.map((product) => (
+                          <option key={product.id} value={product.id}>{product.title}</option>
+                        ))}
+                      </select>
                     </label>
                     <button type="submit" className="btn-primary shrink-0">
                       <Send className="w-4 h-4" />
@@ -447,6 +465,9 @@ export const WantedBoardView: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleAcceptOffer(listing, offer)}
+                              disabled={Boolean(offer.productId && !products.some(
+                                (product) => product.id === offer.productId && product.status === 'active'
+                              ))}
                               className="btn-primary h-10 px-5 text-sm"
                             >
                               <Lock className="w-3.5 h-3.5" />

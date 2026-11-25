@@ -491,7 +491,7 @@ export const AuctionDetailView: React.FC = () => {
               </button>
               {openSection === 'escrow' && (
                 <div className="pb-6 text-sm text-charcoal space-y-2 leading-relaxed animate-fade-in">
-                  <p>1. ชำระเงินเข้าบัญชีพักเงินตัวกลาง SomJing Escrow (ค่าบริการคุ้มครอง 2%)</p>
+                  <p>1. ผู้ซื้อชำระราคาสินค้าและระบบพักเงินไว้ใน SomJing Escrow</p>
                   <p>2. ผู้ขายจัดส่งสินค้าพร้อมแนบเลขพัสดุ</p>
                   <p>3. ผู้ซื้อตรวจรับสินค้าและกดยืนยันรับของ จึงจะปล่อยเงินให้ผู้ขาย</p>
                 </div>

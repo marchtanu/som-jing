@@ -35,8 +35,7 @@ export const PaymentModal: React.FC = () => {
 
   if (!checkoutTarget) return null;
 
-  const escrowFee = Math.round(checkoutTarget.amount * 0.02);
-  const totalPaid = checkoutTarget.amount + escrowFee;
+  const totalPaid = checkoutTarget.amount;
 
   const handleConfirmPayment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -292,10 +291,6 @@ export const PaymentModal: React.FC = () => {
             <div className="flex justify-between text-mute">
               <span>ราคาสินค้า</span>
               <span className="font-mono text-ink">{formatTHB(checkoutTarget.amount)}</span>
-            </div>
-            <div className="flex justify-between text-mute">
-              <span>ค่าบริการคุ้มครอง Escrow (2%)</span>
-              <span className="font-mono text-ink">{formatTHB(escrowFee)}</span>
             </div>
             <div className="pt-3 border-t border-hairline flex justify-between items-baseline">
               <span className="text-base font-medium text-ink">ยอดรวมที่พักใน Escrow</span>

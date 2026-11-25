@@ -265,7 +265,6 @@ describe('SomJing (สมจริง) E-Commerce Prototype Test Suite (TC-01 to
         wantedId: openListing.id,
         price: 58000,
         condition: 'Mint 99%',
-        isVerifiedItem: true,
         message: 'มีของพร้อมส่งครับ',
         image: 'https://example.com/offer.jpg',
       });
@@ -274,6 +273,8 @@ describe('SomJing (สมจริง) E-Commerce Prototype Test Suite (TC-01 to
     const updatedListing = result.current.wantedListings.find((w) => w.id === openListing.id)!;
     const newestOffer = updatedListing.offers[0];
     expect(newestOffer.price).toBe(58000);
+    expect(newestOffer.isVerifiedItem).toBe(false);
+    expect(newestOffer.certificateId).toBeUndefined();
 
     // Buyer logs back in to accept offer & pay into Escrow
     act(() => {
@@ -304,6 +305,8 @@ describe('SomJing (สมจริง) E-Commerce Prototype Test Suite (TC-01 to
     expect(fulfilledListing.status).toBe('fulfilled');
     expect(fulfilledListing.offers[0].status).toBe('accepted');
     expect(result.current.escrowOrders[0].status).toBe('held');
+    expect(result.current.escrowOrders[0].totalPaid).toBe(58000);
+    expect(result.current.escrowOrders[0].sellerCommissionRate).toBe(7);
     expect(result.current.escrowOrders[0].shippingAddress).toBe('123 ถนนพระราม 4 กทม.');
   });
 
@@ -357,12 +360,63 @@ describe('SomJing (สมจริง) E-Commerce Prototype Test Suite (TC-01 to
       result.current.loginUser('buyer@somjing.com', 'password123');
     });
     act(() => {
+      expect(result.current.releaseEscrowFunds(orderId).ok).toBe(false);
+    });
+    act(() => {
       result.current.confirmOrderReceived(orderId);
+    });
+    act(() => {
       result.current.releaseEscrowFunds(orderId);
     });
     const completedOrder = result.current.escrowOrders.find((o) => o.id === orderId)!;
     expect(completedOrder.status).toBe('released');
     expect(completedOrder.timeline.length).toBe(4);
+    expect(completedOrder.totalPaid).toBe(15800);
+    expect(completedOrder.sellerCommissionRate).toBe(7);
+    expect(completedOrder.timeline[3].detail).toContain('14,694');
+  });
+
+  it('uses the linked Verified product for Wanted checkout and deducts 5% from the seller', () => {
+    const { result } = renderHook(() => useStore(), { wrapper: createWrapper() });
+    const product = result.current.products.find((item) => item.id === 'prod-2')!;
+    act(() => {
+      result.current.loginUser('seller@somjing.com', 'password123');
+    });
+    act(() => {
+      expect(result.current.submitWantedOffer({
+        wantedId: 'want-2',
+        productId: product.id,
+        price: 6500.50,
+        condition: 'test',
+        message: 'มีของพร้อมส่ง',
+        image: '',
+      }).ok).toBe(true);
+    });
+    const offer = result.current.wantedListings.find((listing) => listing.id === 'want-2')!.offers[0];
+    expect(offer.isVerifiedItem).toBe(true);
+    expect(offer.certificateId).toBe(product.certificateId);
+
+    act(() => {
+      result.current.loginUser('buyer@somjing.com', 'password123');
+    });
+    act(() => {
+      const order = result.current.completeSimulatedPayment({
+        sourceType: 'wanted_offer',
+        sourceId: offer.id,
+        wantedListingId: 'want-2',
+        wantedProductId: offer.productId,
+        productTitle: product.title,
+        productImage: offer.image,
+        amount: offer.price,
+        sellerId: offer.sellerId,
+        sellerName: offer.sellerName,
+        isVerifiedItem: offer.isVerifiedItem,
+        certificateId: offer.certificateId,
+      }, 'PromptPay QR');
+      expect(order.totalPaid).toBe(6500.50);
+      expect(order.sellerCommissionRate).toBe(5);
+    });
+    expect(result.current.products.find((item) => item.id === product.id)?.status).toBe('sold');
   });
 
   it('TC-11: blocks non-admin from approving verify requests; admin approval issues Verified Badge', () => {
@@ -511,5 +565,46 @@ describe('SomJing (สมจริง) E-Commerce Prototype Test Suite (TC-01 to
       result.current.upgradeToSeller();
     });
     expect(result.current.currentUser?.role).toBe('seller');
+  });
+
+  it('TC-16: migrates legacy localStorage escrow orders without sellerCommissionRate to 5%/7% seller commission', () => {
+    const { result: initResult, unmount: unmountInit } = renderHook(() => useStore(), {
+      wrapper: createWrapper(),
+    });
+    const legacyState = {
+      users: initResult.current.users,
+      currentUserId: initResult.current.users[0].id,
+      products: initResult.current.products,
+      verificationRequests: initResult.current.verificationRequests,
+      wantedListings: initResult.current.wantedListings,
+      complaints: initResult.current.complaints,
+      watchlistIds: initResult.current.watchlistIds,
+      selectedOptionByProduct: {},
+      escrowOrders: [
+        {
+          ...initResult.current.escrowOrders[0],
+          amount: 10000,
+          totalPaid: 10200,
+          isVerifiedItem: true,
+          sellerCommissionRate: undefined,
+        },
+        {
+          ...initResult.current.escrowOrders[1],
+          amount: 10000,
+          totalPaid: 10200,
+          isVerifiedItem: false,
+          sellerCommissionRate: undefined,
+        },
+      ],
+    };
+    unmountInit();
+
+    localStorage.setItem('somjing_prototype_v2', JSON.stringify(legacyState));
+    const { result } = renderHook(() => useStore(), { wrapper: createWrapper() });
+
+    expect(result.current.escrowOrders[0].sellerCommissionRate).toBe(5);
+    expect(result.current.escrowOrders[0].totalPaid).toBe(10000);
+    expect(result.current.escrowOrders[1].sellerCommissionRate).toBe(7);
+    expect(result.current.escrowOrders[1].totalPaid).toBe(10000);
   });
 });

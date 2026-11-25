@@ -61,7 +61,7 @@ Vite serves app at `http://localhost:5173/`. Press `Ctrl + C` in terminal to sto
 npm test
 ```
 
-Runs 13 Vitest test cases (`TC-01` to `TC-13`) covering real RBAC auth, product option sync, watchlist, bidding, verify, wanted offers, 4-step escrow, and admin actions.
+Runs 17 automated Vitest test cases (`TC-01` to `TC-16` plus Verified Wanted checkout) covering real RBAC auth, product option sync, watchlist, bidding, verify, wanted offers, 4-step escrow with 5%/7% seller commission, legacy storage migration, and admin actions.
 
 ### 6. Build & preview production bundle
 

@@ -97,7 +97,7 @@ export const VerifyRequestView: React.FC = () => {
           ขอรับรองความแท้ (SomJing Verification)
         </h1>
         <p className="text-base text-mute mt-1">
-          ส่ง Serial Number และหลักฐานภาพถ่ายให้ผู้เชี่ยวชาญตรวจสอบเพื่อรับตรา SomJing Verified Badge
+          ส่ง Serial Number และหลักฐานภาพถ่ายให้ผู้เชี่ยวชาญตรวจสอบเพื่อรับตรา SomJing Verified Badge และรับสิทธิ์ค่าคอมมิชชันผู้ขาย 5% (จากปกติ 7%)
         </p>
       </div>
 

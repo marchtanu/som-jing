@@ -12,6 +12,7 @@ import {
 import { useStore } from '../context/StoreContext';
 import { EscrowOrder, EscrowStatus, UserRole } from '../types';
 import { formatTHB, formatThaiDateTime } from '../utils/format';
+import { getSellerSettlement } from '../utils/sellerCommission';
 import { SafeImage, VerificationBadge } from './ui';
 
 const ESCROW_STEPS: { key: EscrowStatus; label: string; sub: string }[] = [
@@ -88,7 +89,7 @@ export const EscrowView: React.FC = () => {
 
   const totalReleasedAmount = roleOrders
     .filter((o) => o.status === 'released')
-    .reduce((sum, o) => sum + o.amount, 0);
+    .reduce((sum, o) => sum + (isBuyer ? o.totalPaid : getSellerSettlement(o).payout), 0);
 
   const headingTitle = isAdmin
     ? 'ตรวจสอบธุรกรรม Escrow ทั้งระบบ'
@@ -256,6 +257,7 @@ const EscrowOrderCard: React.FC<{
   const isBuyer = currentUserId === order.buyerId;
   const isSeller = currentUserId === order.sellerId;
   const isAdmin = currentUserRole === 'admin';
+  const sellerSettlement = getSellerSettlement(order);
 
   const handleShipSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -319,13 +321,16 @@ const EscrowOrderCard: React.FC<{
         </div>
 
         <div className="md:text-right shrink-0">
-          <p className="text-xs text-mute">ยอดรวมที่พักใน Escrow</p>
+          <p className="text-xs text-mute">ยอดที่ผู้ซื้อชำระ</p>
           <p className="text-2xl font-medium font-mono text-ink tabular-nums">
             {formatTHB(order.totalPaid)}
           </p>
-          <p className="text-xs text-mute">
-            สินค้า {formatTHB(order.amount)} + ค่าคุ้มครอง {formatTHB(order.escrowFee)}
-          </p>
+          {(isSeller || isAdmin) && order.sellerCommissionRate && order.status !== 'refunded' && (
+            <div className="mt-2 space-y-1 text-xs text-mute">
+              <p>ค่าคอมมิชชันผู้ขาย ({order.sellerCommissionRate}%) {formatTHB(sellerSettlement.commission)}</p>
+              <p className="font-medium text-ink">ยอดสุทธิผู้ขาย {formatTHB(sellerSettlement.payout)}</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -519,8 +524,12 @@ const EscrowOrderCard: React.FC<{
             <div className="text-sm">
               <p className="font-medium text-ink">ผู้ซื้อยืนยันรับสินค้าเรียบร้อยแล้ว</p>
               <p className="text-mute">
-                พร้อมโอนยอดสุทธิ <span className="font-mono text-ink">{formatTHB(order.amount)}</span>{' '}
+                พร้อมปล่อยยอดสุทธิ{' '}
+                <span className="font-mono text-ink">{formatTHB(sellerSettlement.payout)}</span>{' '}
                 ออกจากบัญชีพักเงินให้ผู้ขาย
+                {order.sellerCommissionRate
+                  ? ` (หักค่าคอมมิชชันผู้ขาย ${order.sellerCommissionRate}% จำนวน ${formatTHB(sellerSettlement.commission)})`
+                  : ''}
               </p>
             </div>
             <button

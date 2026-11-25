@@ -88,6 +88,7 @@ export interface VerificationRequest {
 export interface WantedOffer {
   id: string;
   wantedId: string;
+  productId?: string;
   sellerId: string;
   sellerName: string;
   price: number;
@@ -136,7 +137,7 @@ export interface EscrowOrder {
   productImage: string;
   selectedOptionLabel?: string;
   amount: number;
-  escrowFee: number;
+  sellerCommissionRate?: 5 | 7;
   totalPaid: number;
   paymentMethod: PaymentMethod;
   shippingAddress?: string;
@@ -200,4 +201,5 @@ export interface PaymentCheckoutTarget {
   isVerifiedItem: boolean;
   certificateId?: string;
   wantedListingId?: string;
+  wantedProductId?: string;
 }
